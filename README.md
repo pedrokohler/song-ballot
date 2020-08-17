@@ -40,11 +40,11 @@ git push origin gh-pages
 # Come back to master
 git checkout master
 
-# Add dist to .gitignore
-echo "dist" >> .gitignore
-
 git worktree add dist gh-pages
 ```
+
+If your source controll changes are full of wrong updates updates, just restart your IDE and it'll work fine.
+
 ## Usage
 
 ### Development server
@@ -63,15 +63,23 @@ npm run build
 
 > Note: Install [http-server](https://www.npmjs.com/package/http-server) globally to deploy a simple server.
 
-```bash 
+```bash
 npm i -g http-server
 ```
 
-You can view the deploy by creating a server in `dist`. 
+You can view the deploy by creating a server in `dist`.
 
 ```bash
 cd dist && http-server
 ```
+
+### Deploy
+
+```
+yarn deploy "message here"
+```
+
+Will deploy the application commiting the gh-pages and pushing it to origin with the message you insert.
 
 ## Features
 
