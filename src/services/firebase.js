@@ -1,7 +1,8 @@
 import firebase from 'firebase';
+
 let firebaseConfig;
 
-const DEV_ENVIRONMENT = process.env.NODE_ENV === "development" ? true : false;
+const DEV_ENVIRONMENT = process.env.NODE_ENV === 'development';
 
 if (DEV_ENVIRONMENT) {
   firebaseConfig = {
@@ -27,4 +28,3 @@ if (DEV_ENVIRONMENT) {
 
 firebase.initializeApp(firebaseConfig);
 export const db = firebase.firestore();
-

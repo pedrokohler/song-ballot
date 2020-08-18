@@ -1,7 +1,7 @@
-const paths = require('./paths')
-const { CleanWebpackPlugin } = require('clean-webpack-plugin')
-const CopyWebpackPlugin = require('copy-webpack-plugin')
-const HtmlWebpackPlugin = require('html-webpack-plugin')
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const paths = require('./paths');
 
 module.exports = {
   /**
@@ -9,7 +9,7 @@ module.exports = {
    *
    * The first place Webpack looks to start building the bundle.
    */
-  entry: [paths.src + '/index.js'],
+  entry: [`${paths.src}/index.js`],
 
   /**
    * Output
@@ -54,9 +54,9 @@ module.exports = {
      * Generates an HTML file from a template.
      */
     new HtmlWebpackPlugin({
-      title: 'MS Bruxao',
-      favicon: paths.static + '/favicon.png',
-      template: paths.src + '/template.html', // template file
+      title: 'Song Ballot',
+      favicon: `${paths.static}/favicon.png`,
+      template: `${paths.src}/template.html`, // template file
       filename: 'index.html', // output file
     }),
   ],
@@ -124,4 +124,4 @@ module.exports = {
       },
     ],
   },
-}
+};
