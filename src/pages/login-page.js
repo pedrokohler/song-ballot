@@ -8,8 +8,10 @@ class LoginPage extends LitElement {
   static get styles() {
     return css`
       .shell {
+        box-sizing: border-box;
         width: 100vw;
-        height: 100vh;
+        height: 100%;
+        min-width: 320px;
         background-image: url("images/background.jpg");
         background-size: cover;
         margin: 0;
@@ -45,12 +47,18 @@ class LoginPage extends LitElement {
 
       @media only screen and (max-width: 600px) {
         .shell {
-          background-size: auto 100vh;
+          background-size: cover;
           background-position: 40% 10%;
           background-repeat: no-repeat;
         }
       }
     `;
+  }
+
+  firstUpdated() {
+    this.shadowRoot.querySelector('button').addEventListener('click', () => {
+      window.location.href = '/menu';
+    });
   }
 
   render() {

@@ -1,6 +1,12 @@
-import './pages/login-page';
+import { Router } from '@vaadin/router';
+
+import './pages/home-page';
 
 const app = document.querySelector('#root');
-app.innerHTML = `
-  <login-page></login-page>
-`;
+const router = new Router(app);
+
+router.setRoutes([
+  // { path: '/', component: 'home-page' },
+  { path: '/', component: 'login-page' },
+  { path: '/menu', component: 'menu-page' },
+]);

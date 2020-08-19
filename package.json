@@ -41,6 +41,7 @@
     "webpack-merge": "4.2.2"
   },
   "dependencies": {
+    "@vaadin/router": "1.7.2",
     "eslint-config-airbnb-base": "^14.2.0",
     "eslint-plugin-import": "^2.22.0",
     "firebase": "7.18.0",
