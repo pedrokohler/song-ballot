@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack-dev-server --config config/webpack.dev.js",
-    "build": "cross-env NODE_ENV=production webpack --config config/webpack.prod.js && node config/scripts/clear-forward-slash.js",
+    "build": "cross-env NODE_ENV=production webpack --config config/webpack.prod.js",
     "deploy": "node ./config/scripts/deploy.js"
   },
   "devDependencies": {
