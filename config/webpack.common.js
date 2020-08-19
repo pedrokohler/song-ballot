@@ -114,7 +114,7 @@ module.exports = {
        * Inline font files.
        */
       {
-        test: /\.(woff(2)?|eot|ttf|otf|)$/,
+        test: /\.(woff(2)?|eot|ttf|otf)$/,
         loader: 'url-loader',
         options: {
           limit: 8192,

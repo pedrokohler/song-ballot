@@ -1,6 +1,8 @@
 import { LitElement, html, css } from 'lit-element';
 import VerticalLogo from '../images/vertical-logo.png';
 import NormalGoogleSignInButton from '../images/btn_google_signin_light_normal_web.png';
+// eslint-disable-next-line no-unused-vars
+import Background from '../images/background.jpg'; // so that webpack loads the image
 
 class LoginPage extends LitElement {
   static get styles() {
@@ -18,15 +20,20 @@ class LoginPage extends LitElement {
         height: 145px;
       }
 
-      button {
+      button, button:active {
         margin-bottom: 70px;
+        font-size: 100%;
         background: none;
         color: inherit;
-        border: none;
+        border: 0;
         padding: 0;
-        font: inherit;
+        font-family: inherit;
         cursor: pointer;
         outline: inherit;
+      }
+
+      button img {
+        display:  block;
       }
 
       header, section {
@@ -38,7 +45,7 @@ class LoginPage extends LitElement {
 
       @media only screen and (max-width: 600px) {
         .shell {
-          background-size: auto 600px;
+          background-size: auto 100vh;
           background-position: 40% 10%;
           background-repeat: no-repeat;
         }
@@ -53,7 +60,9 @@ class LoginPage extends LitElement {
               <img class="logo" src=${VerticalLogo} alt="song ballot"/>
             </header>
             <section>
-              <button><img src=${NormalGoogleSignInButton} alt=""/></button>
+              <button>
+                <img src=${NormalGoogleSignInButton} alt="sign in with google"/>
+              </button>
             </section>
           </section>
         `;
