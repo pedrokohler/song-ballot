@@ -79,6 +79,7 @@ export default class SendSongPage extends LitElement {
             border: none;
             border-radius: 3px;
             vertical-align: baseline;
+            cursor: pointer;
         }
 
         iframe {

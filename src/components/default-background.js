@@ -5,6 +5,7 @@ export default class DefaultBackground extends LitElement {
   static get styles() {
     return css`
         .shell {
+            position: relative;
             box-sizing: border-box;
             width: 100vw;
             min-height: 100%;

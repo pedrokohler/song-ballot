@@ -13,6 +13,15 @@
   <title><%= htmlWebpackPlugin.options.title %></title>
 
   <style>
+    *::-webkit-scrollbar {
+      display: none;
+    }
+
+    * {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
     html,
     body {
       font-family: "Oswald";
