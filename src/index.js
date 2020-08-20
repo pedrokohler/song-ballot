@@ -9,6 +9,14 @@ customElements.whenDefined('router-slot').then(async () => {
       component: () => import('./pages/menu-page'),
     },
     {
+      path: 'background',
+      component: () => import('./components/default-background'),
+    },
+    {
+      path: 'send-song',
+      component: () => import('./pages/send-song-page'),
+    },
+    {
       path: '',
       component: () => import('./pages/login-page'),
     },

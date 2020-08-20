@@ -1,12 +1,12 @@
 import { LitElement, html, css } from 'lit-element';
 
 const options = [
-  'Perfil',
-  'Enviar música',
-  'Votar',
-  'Resultado',
-  'Histórico',
-  'Favoritas',
+  { label: 'Perfil', path: '' },
+  { label: 'Enviar música', path: 'send-song' },
+  { label: 'Votar', path: '' },
+  { label: 'Resultado', path: '' },
+  { label: 'Histórico', path: '' },
+  { label: 'Favoritas', path: '' },
 ];
 
 export default class MenuPage extends LitElement {
@@ -37,12 +37,12 @@ export default class MenuPage extends LitElement {
             max-width: 300px;
             height: 1px;
             background-color: rgba(251, 251, 211, 0.1);
-
         }
         li {
             display: block;
             padding: 10px;
             text-transform: uppercase;
+            cursor: pointer;
         }
     `;
   }
@@ -51,11 +51,13 @@ export default class MenuPage extends LitElement {
     if (index > 0) {
       return html`
         <hr/>
-        <li>${option}</li>
+        <router-link path=${option.path}>
+          <li>${option.label}</li>
+        </router-link>
       `;
     }
     return html`
-      <li>${option}</li>
+      <li>${option.label}</li>
     `;
   }
 
