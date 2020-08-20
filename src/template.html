@@ -8,6 +8,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&display=swap"
     rel="stylesheet">
 
+  <base href=<%= htmlWebpackPlugin.files.publicPath %>>
+
   <title><%= htmlWebpackPlugin.options.title %></title>
 
   <style>
@@ -34,7 +36,9 @@
 
 <body>
 
-  <div id="root"></div>
+  <div id="root">
+    <router-slot></router-slot>
+  </div>
 
 </body>
 

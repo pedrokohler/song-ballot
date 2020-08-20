@@ -1,12 +1,20 @@
-import { Router } from '@vaadin/router';
+import '@appnest/web-router';
 
-import './pages/home-page';
-
-const app = document.querySelector('#root');
-const router = new Router(app);
-
-router.setRoutes([
-  // { path: '/', component: 'home-page' },
-  { path: '/', component: 'login-page' },
-  { path: '/menu', component: 'menu-page' },
-]);
+customElements.whenDefined('router-slot').then(async () => {
+  const routerSlot = document.querySelector('router-slot');
+  window.routerSlot = routerSlot;
+  await routerSlot.add([
+    {
+      path: 'menu',
+      component: () => import('./pages/menu-page'),
+    },
+    {
+      path: '',
+      component: () => import('./pages/login-page'),
+    },
+    {
+      path: '**',
+      redirectTo: 'menu',
+    },
+  ]);
+});

@@ -9,7 +9,7 @@ const options = [
   'Favoritas',
 ];
 
-class MenuPage extends LitElement {
+export default class MenuPage extends LitElement {
   static get styles() {
     return css`
         .shell {
@@ -34,6 +34,7 @@ class MenuPage extends LitElement {
         hr {
             border: none;
             width: 65%;
+            max-width: 300px;
             height: 1px;
             background-color: rgba(251, 251, 211, 0.1);
 
@@ -69,4 +70,4 @@ class MenuPage extends LitElement {
   }
 }
 
-export default customElements.define('menu-page', MenuPage);
+window.customElements.define('menu-page', MenuPage);

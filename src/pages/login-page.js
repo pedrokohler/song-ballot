@@ -1,10 +1,12 @@
 import { LitElement, html, css } from 'lit-element';
-import VerticalLogo from '../images/vertical-logo.png';
-import NormalGoogleSignInButton from '../images/btn_google_signin_light_normal_web.png';
+
+import '../components/google-sing-in-button';
+
 // eslint-disable-next-line no-unused-vars
 import Background from '../images/background.jpg'; // so that webpack loads the image
+import VerticalLogo from '../images/vertical-logo.png';
 
-class LoginPage extends LitElement {
+export default class LoginPage extends LitElement {
   static get styles() {
     return css`
       .shell {
@@ -22,20 +24,8 @@ class LoginPage extends LitElement {
         height: 145px;
       }
 
-      button, button:active {
+      google-sign-in-button {
         margin-bottom: 70px;
-        font-size: 100%;
-        background: none;
-        color: inherit;
-        border: 0;
-        padding: 0;
-        font-family: inherit;
-        cursor: pointer;
-        outline: inherit;
-      }
-
-      button img {
-        display:  block;
       }
 
       header, section {
@@ -56,9 +46,10 @@ class LoginPage extends LitElement {
   }
 
   firstUpdated() {
-    this.shadowRoot.querySelector('button').addEventListener('click', () => {
-      window.location.href = '/menu';
-    });
+    this.shadowRoot.querySelector('google-sign-in-button')
+      .addEventListener('click', () => {
+        window.history.pushState(null, '', 'menu');
+      });
   }
 
   render() {
@@ -68,13 +59,11 @@ class LoginPage extends LitElement {
               <img class="logo" src=${VerticalLogo} alt="song ballot"/>
             </header>
             <section>
-              <button>
-                <img src=${NormalGoogleSignInButton} alt="sign in with google"/>
-              </button>
+              <google-sign-in-button></google-sign-in-button>
             </section>
           </section>
         `;
   }
 }
 
-export default customElements.define('login-page', LoginPage);
+window.customElements.define('login-page', LoginPage);
