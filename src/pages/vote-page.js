@@ -1,11 +1,13 @@
 import { LitElement, html, css } from 'lit-element';
 import '../components/default-background';
 import '../components/alert-modal';
+import forwardArrows from '../images/forward-arrows.png';
+import backwardArrows from '../images/backward-arrows.png';
 
-export default class SendSongPage extends LitElement {
+export default class VotePage extends LitElement {
   static get styles() {
     return css`
-        section {
+        .shell {
             border-radius: 3px;
             min-height: 200px;
             height: inherit;
@@ -46,6 +48,11 @@ export default class SendSongPage extends LitElement {
             text-transform: uppercase;
         }
 
+        .song-title {
+            text-transform: none;
+            margin-right: auto;
+        }
+
         div h4 {
             margin-bottom: 0;
             text-transform: none;
@@ -60,7 +67,7 @@ export default class SendSongPage extends LitElement {
 
         input {
             height: 1.5em;
-            width: 100%;
+            width: 120px;
             border-radius: 3px;
             margin-bottom: 1em;
             font-family: inherit;
@@ -68,27 +75,53 @@ export default class SendSongPage extends LitElement {
             border-width: 1px;
             font-size: 1em;
             background-color: #F2F2F2;
+            text-align: center;
         }
 
-        button {
-            margin-right: auto;
-            width: 100px;
-            height: 35px;
-            text-transform: uppercase;
-            background-color: #FBC303;
-            font-weight: 900;
-            font-family: inherit;
+        .navigation-section {
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        .navigation-btn {
+            background-color: transparent;
             border: none;
-            border-radius: 3px;
-            vertical-align: baseline;
-            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+        }
+
+        .navigation-btn:focus {
+            outline: none;
+        }
+
+        .navigation-btn:disabled span {
+            color: #CCCCCC;
+        }
+
+        .navigation-btn:disabled img {
+            filter: invert(91%) hue-rotate(135deg) brightness(92%) contrast(89%);
+        }
+
+        .navigation-section img {
+            width: 15px;
+            height: 15px;
+            vertical-align: middle;
+        }
+
+        .navigation-section span {
+            display: inline;
+            vertical-align: middle;
+            text-transform: uppercase;
+            margin: 0 10px;
         }
 
         iframe {
             width: 100%;
             height: 300px;
             max-height: 50%;
-            margin-bottom: 0.5em;
+            margin-bottom: 1em;
         }
     `;
   }
@@ -97,23 +130,28 @@ export default class SendSongPage extends LitElement {
     return html`
         <alert-modal></alert-modal>
         <default-background>
-            <section>
-                <h3>Enviar música</h3>
+            <section class="shell">
+                <h3>Votar</h3>
                 <h4>Semana 18/08/20</h4>
-                <p>O limite para envio da música é até 12h da terça feira</p>
+                <p>O limite para votação é até 20h00 de domingo</p>
                 <hr/>
+                <h4 class="song-title">Música 1</h4>
                 <iframe src="https://www.youtube.com/embed/nXm2x5IRjt0" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                <div>
-                    <h4>Enviar segunda música</h4>
-                    <h6>Insira o link do vídeo do Youtube</h6>
-                </div>
-                <input type="url"/>
-                <!-- @todo implement real callback -->
-                <button @click="${() => this.shadowRoot.querySelector('alert-modal').setAttribute('isOpen', '')}">Carregar</button>
+                <input type="number" max="10" min="1"/>
+                <section class="navigation-section">
+                    <button disabled class="navigation-btn">
+                        <img src=${backwardArrows} alt=""/>
+                        <span>anterior</span>
+                    </button>
+                    <button class="navigation-btn">
+                        <span>próxima</span>
+                        <img src=${forwardArrows} alt=""/>
+                    </button>
+                </section>
             </section>
         </default-background>
     `;
   }
 }
 
-window.customElements.define('send-song-page', SendSongPage);
+window.customElements.define('vote-page', VotePage);

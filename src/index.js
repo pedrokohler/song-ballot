@@ -17,6 +17,10 @@ customElements.whenDefined('router-slot').then(async () => {
       component: () => import('./pages/send-song-page'),
     },
     {
+      path: 'vote',
+      component: () => import('./pages/vote-page'),
+    },
+    {
       path: '',
       component: () => import('./pages/login-page'),
     },

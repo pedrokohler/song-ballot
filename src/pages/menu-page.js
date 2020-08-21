@@ -1,12 +1,12 @@
 import { LitElement, html, css } from 'lit-element';
 
 const options = [
-  { label: 'Perfil', path: '' },
   { label: 'Enviar música', path: 'send-song' },
-  { label: 'Votar', path: '' },
+  { label: 'Votar', path: 'vote' },
   { label: 'Resultado', path: '' },
   { label: 'Histórico', path: '' },
   { label: 'Favoritas', path: '' },
+  { label: 'Perfil', path: '' },
 ];
 
 export default class MenuPage extends LitElement {
@@ -57,7 +57,9 @@ export default class MenuPage extends LitElement {
       `;
     }
     return html`
-      <li>${option.label}</li>
+      <router-link path=${option.path}>
+        <li>${option.label}</li>
+      </router-link>
     `;
   }
 

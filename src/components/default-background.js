@@ -16,6 +16,12 @@ export default class DefaultBackground extends LitElement {
         .logo {
             width: 160px;
             height: 72px;
+            cursor: pointer;
+        }
+
+        router-link:active, router-link:focus {
+            border: none;
+            outline: none;
         }
 
         header {
@@ -75,7 +81,9 @@ export default class DefaultBackground extends LitElement {
     return html`
         <section class="shell">
             <header>
-                <img class="logo" src=${HorizontalLogo} alt="song ballot"/>
+                <router-link path='menu'>
+                    <img class="logo" src=${HorizontalLogo} alt="song ballot"/>
+                </router-link>
             </header>
             <section class="yellow"></section>
             <section class="grey"></section>
