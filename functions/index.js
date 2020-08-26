@@ -19,7 +19,7 @@ exports.getYoutubeTitle = functions.https.onCall((data, context) => {
   const { uid } = context.auth;
   if (uid) {
     const { videoId } = data;
-    const apiKey = "";
+    const apiKey = functions.config().youtube.key;
     const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&fields=items(id%2Csnippet)&key=${apiKey}`;
 
     return new Promise((resolve, reject) => {

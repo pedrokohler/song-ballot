@@ -47,6 +47,12 @@ git worktree add dist gh-pages
 
 If your source controll changes are full of wrong updates updates, just restart your IDE and it'll work fine.
 
+To deploy firebase functions, first add the youtube.key variable
+```
+cd ./functions
+firebase functions:config:set youtube.key="YOUR_KEY"
+```
+
 ## Usage
 
 ### Development server
