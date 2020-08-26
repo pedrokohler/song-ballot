@@ -35,6 +35,5 @@ export const db = firebase.firestore();
 export const handleGoogleSignIn = (e) => {
   e.preventDefault();
   const provider = new firebase.auth.GoogleAuthProvider();
-  provider.addScope('https://www.googleapis.com/auth/contacts.readonly');
   firebase.auth().signInWithRedirect(provider);
 };
