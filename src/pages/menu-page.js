@@ -7,6 +7,7 @@ const options = [
   { label: 'Histórico', path: '' },
   { label: 'Favoritas', path: '' },
   { label: 'Perfil', path: '' },
+  { label: 'Logout', path: 'logout' },
 ];
 
 export default class MenuPage extends LitElement {

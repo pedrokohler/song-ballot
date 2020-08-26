@@ -1,24 +1,36 @@
 import '@appnest/web-router';
+import { store } from './store';
+
+function sessionGuard() {
+  if (!store.currentUser) {
+    window.history.replaceState(null, '', '');
+    return false;
+  }
+  return true;
+}
 
 customElements.whenDefined('router-slot').then(async () => {
   const routerSlot = document.querySelector('router-slot');
-  window.routerSlot = routerSlot;
   await routerSlot.add([
     {
       path: 'menu',
       component: () => import('./pages/menu-page'),
-    },
-    {
-      path: 'background',
-      component: () => import('./components/default-background'),
+      guards: [sessionGuard],
     },
     {
       path: 'send-song',
       component: () => import('./pages/send-song-page'),
+      guards: [sessionGuard],
     },
     {
       path: 'vote',
       component: () => import('./pages/vote-page'),
+      guards: [sessionGuard],
+    },
+    {
+      path: 'logout',
+      component: () => import('./pages/logout-page'),
+      guards: [sessionGuard],
     },
     {
       path: '',

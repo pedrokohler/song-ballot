@@ -1,4 +1,4 @@
-const { LitElement, html, css } = require('lit-element');
+import { LitElement, html, css } from 'lit-element';
 
 export default class GoogleSingInButton extends LitElement {
   static get styles() {

@@ -1,12 +1,16 @@
 import { LitElement, html, css } from 'lit-element';
+import { observer } from 'mobx-lit-element';
+import '@polymer/paper-progress/paper-progress';
 
+import { store } from '../store';
+import { handleGoogleSignIn } from '../services/firebase';
 import '../components/google-sing-in-button';
 
 // eslint-disable-next-line no-unused-vars
 import Background from '../images/background.jpg'; // so that webpack loads the image
 import VerticalLogo from '../images/vertical-logo.png';
 
-export default class LoginPage extends LitElement {
+export default class LoginPage extends observer(LitElement) {
   static get styles() {
     return css`
       .shell {
@@ -35,6 +39,11 @@ export default class LoginPage extends LitElement {
         justify-content: space-between;
       }
 
+      paper-progress {
+        width: 100%;
+        --paper-progress-active-color: #FBC303;
+      }
+
       @media only screen and (max-width: 600px) {
         .shell {
           background-size: cover;
@@ -45,24 +54,30 @@ export default class LoginPage extends LitElement {
     `;
   }
 
-  firstUpdated() {
-    this.shadowRoot.querySelector('google-sign-in-button')
-      .addEventListener('click', () => {
-        window.history.pushState(null, '', 'menu');
-      });
-  }
-
   render() {
-    return html`
-          <section class="shell">
-            <header>
-              <img class="logo" src=${VerticalLogo} alt="song ballot"/>
-            </header>
-            <section>
-              <google-sign-in-button></google-sign-in-button>
+    if (!store.authStateChecked) {
+      return html`
+      <section>
+        <paper-progress class="blue" indeterminate></paper-progress>
+      </section>
+      `;
+    }
+
+    if (!store.currentUser) {
+      return html`
+            <section class="shell">
+              <header>
+                <img class="logo" src=${VerticalLogo} alt="song ballot"/>
+              </header>
+              <section>
+                <google-sign-in-button @click=${handleGoogleSignIn}></google-sign-in-button>
+              </section>
             </section>
-          </section>
-        `;
+          `;
+    }
+
+    window.history.pushState(null, '', 'menu');
+    return '';
   }
 }
 

@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit-element';
 import '../components/default-background';
 import '../components/alert-modal';
+// import firebase from 'firebase';
 
 export default class SendSongPage extends LitElement {
   static get styles() {
@@ -92,6 +93,11 @@ export default class SendSongPage extends LitElement {
         }
     `;
   }
+
+  //   firstUpdated() {
+  //     const getYoutubeTitle = firebase.functions().httpsCallable('getYoutubeTitle');
+  //     getYoutubeTitle({ videoId: 'HC3B0GHwOM8' }).then((response) => console.log(response.data));
+  //   }
 
   render() {
     return html`

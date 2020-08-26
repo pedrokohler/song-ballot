@@ -90,6 +90,7 @@ export default class VotePage extends LitElement {
             border: none;
             font-family: inherit;
             font-weight: 600;
+            cursor: pointer;
         }
 
         .navigation-btn:focus {
@@ -98,6 +99,7 @@ export default class VotePage extends LitElement {
 
         .navigation-btn:disabled span {
             color: #CCCCCC;
+            cursor: not-allowed;
         }
 
         .navigation-btn:disabled img {
