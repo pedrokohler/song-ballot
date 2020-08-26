@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit-element';
 import '../components/default-background';
 import '../components/alert-modal';
-// import firebase from 'firebase';
+import firebase from 'firebase';
 
 export default class SendSongPage extends LitElement {
   static get styles() {
@@ -94,10 +94,40 @@ export default class SendSongPage extends LitElement {
     `;
   }
 
-  //   firstUpdated() {
-  //     const getYoutubeTitle = firebase.functions().httpsCallable('getYoutubeTitle');
-  //     getYoutubeTitle({ videoId: 'HC3B0GHwOM8' }).then((response) => console.log(response.data));
-  //   }
+  getYoutubeVideoTitle(videoId) {
+    const getYoutubeTitle = firebase.functions().httpsCallable('getYoutubeTitle');
+    return new Promise((resolve, reject) => {
+      getYoutubeTitle({ videoId })
+        .then((response) => resolve(response.data))
+        .catch((e) => reject(e.message));
+    });
+  }
+
+  getYoutubeVideoId(url) {
+    const match = url.match(/.*\.be\/(.*)$/) || url.match(/.*\.com\/watch\?v=(.*)$/);
+    return (match && match[1]) || null;
+  }
+
+  async handleConfirmationClick() {
+    const userInput = this.shadowRoot.querySelector('input[type=url]').value;
+    const videoId = this.getYoutubeVideoId(userInput);
+    if (videoId) {
+      const title = await this.getYoutubeVideoTitle(videoId);
+      this.videoTitle = title;
+      this.videoId = videoId;
+    }
+  }
+
+  static get properties() {
+    return {
+      videoId: {
+        type: String,
+      },
+      videoTitle: {
+        type: String,
+      },
+    };
+  }
 
   render() {
     return html`
@@ -108,14 +138,15 @@ export default class SendSongPage extends LitElement {
                 <h4>Semana 18/08/20</h4>
                 <p>O limite para envio da música é até 12h da terça feira</p>
                 <hr/>
-                <iframe src="https://www.youtube.com/embed/nXm2x5IRjt0" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                ${this.videoId && html`<iframe src=${`https://www.youtube.com/embed/${this.videoId}`} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`}
                 <div>
                     <h4>Enviar segunda música</h4>
                     <h6>Insira o link do vídeo do Youtube</h6>
                 </div>
                 <input type="url"/>
                 <!-- @todo implement real callback -->
-                <button @click="${() => this.shadowRoot.querySelector('alert-modal').setAttribute('isOpen', '')}">Carregar</button>
+                <button @click="${this.handleConfirmationClick}">Carregar</button>
+                ${this.videoId && html`<button @click="${() => this.shadowRoot.querySelector('alert-modal').setAttribute('isOpen', '')}">Enviar</button>`}
             </section>
         </default-background>
     `;

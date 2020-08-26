@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "song-ballot-dev"
+    "development": "song-ballot-dev",
+    "production": "song-ballot-95754"
   }
 }

@@ -16,13 +16,13 @@ if (DEV_ENVIRONMENT) {
   };
 } else {
   firebaseConfig = {
-    apiKey: 'AIzaSyAW6ngeVRTeNRsvhxJj0bBz2Dj8o_qI6yY',
-    authDomain: 'ms-bruxao.firebaseapp.com',
-    databaseURL: 'https://ms-bruxao.firebaseio.com',
-    projectId: 'ms-bruxao',
-    storageBucket: 'ms-bruxao.appspot.com',
-    messagingSenderId: '747982556462',
-    appId: '1:747982556462:web:a1c8bb6a9b722f3f19bebf',
+    apiKey: 'AIzaSyAOY3k262Ehu_BVw9NXPragSxLTwrihQgE',
+    authDomain: 'song-ballot-95754.firebaseapp.com',
+    databaseURL: 'https://song-ballot-95754.firebaseio.com',
+    projectId: 'song-ballot-95754',
+    storageBucket: 'song-ballot-95754.appspot.com',
+    messagingSenderId: '474008793798',
+    appId: '1:474008793798:web:039994ff043b95de4fddc7',
   };
 }
 
