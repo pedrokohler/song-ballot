@@ -45,6 +45,7 @@
     "eslint-config-airbnb-base": "^14.2.0",
     "eslint-plugin-import": "^2.22.0",
     "firebase": "7.18.0",
+    "firebase-tools": "8.8.1",
     "lit-element": "2.3.1",
     "mobx": "5.15.6",
     "mobx-state-tree": "3.17.2"
