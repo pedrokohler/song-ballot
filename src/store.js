@@ -13,12 +13,20 @@ firebase.auth().onAuthStateChanged((user) => {
   if (user) {
     const { uid } = user;
     db.collection('users').doc(uid).get().then((doc) => {
-      const {
-        photoURL, displayName, email,
-      } = doc.data();
-      store.setCurrentUser({
-        photoURL, displayName, id: uid, email,
-      });
+      const data = doc.data();
+      if (data) {
+        const {
+          photoURL, displayName, email,
+        } = data;
+        store.setCurrentUser({
+          photoURL, displayName, id: uid, email,
+        });
+      } else {
+        const { photoURL, displayName, email } = user;
+        store.setCurrentUser({
+          photoURL, displayName, id: uid, email,
+        });
+      }
       store.setAuthStateChecked(true);
     });
   } else {
