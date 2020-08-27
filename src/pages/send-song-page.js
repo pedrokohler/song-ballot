@@ -1,9 +1,13 @@
 import { LitElement, html, css } from 'lit-element';
+import { observer } from 'mobx-lit-element';
+import { getSnapshot } from 'mobx-state-tree';
 import '../components/default-background';
 import '../components/alert-modal';
 import firebase from 'firebase';
+import { db, DateConverter } from '../services/firebase';
+import { store } from '../store';
 
-export default class SendSongPage extends LitElement {
+export default class SendSongPage extends observer(LitElement) {
   static get styles() {
     return css`
         section {
@@ -14,6 +18,7 @@ export default class SendSongPage extends LitElement {
             min-width: 300px;
             max-width: 600px;
             background-color: #FBFBD3;
+            background-color: #FFFFFF;
             margin-bottom: 20px;
             display: flex;
             flex-direction: column;
@@ -50,6 +55,7 @@ export default class SendSongPage extends LitElement {
         div h4 {
             margin-bottom: 0;
             text-transform: none;
+            text-align: left;
         }
 
         div h6 {
@@ -61,7 +67,7 @@ export default class SendSongPage extends LitElement {
 
         input {
             height: 1.5em;
-            width: 100%;
+            width: calc(100% - 4px);
             border-radius: 3px;
             margin-bottom: 1em;
             font-family: inherit;
@@ -73,6 +79,7 @@ export default class SendSongPage extends LitElement {
 
         button {
             margin-right: auto;
+            margin-bottom: 1em;
             width: 100px;
             height: 35px;
             text-transform: uppercase;
@@ -89,7 +96,7 @@ export default class SendSongPage extends LitElement {
             width: 100%;
             height: 300px;
             max-height: 50%;
-            margin-bottom: 0.5em;
+            margin-bottom: 1em;
         }
     `;
   }
@@ -104,7 +111,7 @@ export default class SendSongPage extends LitElement {
   }
 
   getYoutubeVideoId(url) {
-    const match = url.match(/.*\.be\/(.*)$/) || url.match(/.*\.com\/watch\?v=(.*)$/);
+    const match = url.match(/.*\.be\/([^&]*).*$/) || url.match(/.*\.com\/watch\?v=([^&]*).*$/);
     return (match && match[1]) || null;
   }
 
@@ -115,7 +122,60 @@ export default class SendSongPage extends LitElement {
       const title = await this.getYoutubeVideoTitle(videoId);
       this.videoTitle = title;
       this.videoId = videoId;
+    } else {
+      this.error = 'O URL que você inseriu não é valido.';
     }
+  }
+
+  handleSendVideoClick() {
+    db.collection('songs').doc(this.videoId).get().then((doc) => {
+      if (doc.exists) {
+        throw new Error('A música que você enviou já foi enviada antes. Tente outra música.');
+      } else {
+        const songModel = store.addSong({
+          id: this.videoId,
+          url: this.getURL(),
+          title: this.videoTitle,
+        });
+        const song = getSnapshot(songModel);
+
+        const submissionModel = store.addSubmission({
+          id: store.generateId(),
+          submitterId: store.currentUser.id,
+          songId: this.videoId,
+          evaluations: [],
+        });
+        const submission = getSnapshot(submissionModel);
+
+        const songRef = db.collection('songs')
+          .doc(this.videoId)
+          .withConverter(DateConverter);
+        const submissionRef = db.collection('submissions')
+          .doc(submissionModel.id)
+          .withConverter(DateConverter);
+        const roundRef = db.collection('rounds')
+          .doc(store.ongoingRound.id)
+          .withConverter(DateConverter);
+
+        db.runTransaction(async (transaction) => {
+          const round = await transaction.get(roundRef);
+          const oldSongs = round.data().songs || [];
+          const newSongs = [...oldSongs, this.videoId];
+          await transaction.set(songRef, song);
+          await transaction.set(submissionRef, submission);
+          await transaction.update(roundRef, { songs: newSongs });
+        }).then(() => {
+          this.shadowRoot.querySelector('#successModal').setAttribute('isOpen', '');
+        });
+      }
+    })
+      .catch((e) => {
+        if (e.message === 'A música que você enviou já foi enviada antes. Tente outra música.') {
+          this.error = e.message;
+          return;
+        }
+        this.error = 'Houve um problema ao tentar enviar a sua música. Tente novamente mais tarde.';
+      });
   }
 
   static get properties() {
@@ -126,27 +186,76 @@ export default class SendSongPage extends LitElement {
       videoTitle: {
         type: String,
       },
+      error: {
+        type: String,
+      },
     };
   }
 
-  render() {
+  async firstUpdated() {
+    if (!store.ongoingRound) {
+      await store.getOngoingRound();
+    }
+
+    if (store.ongoingRound.lastWinner.id === store.currentUser.id) {
+      this.isLastWinner = true;
+    }
+  }
+
+  getURL() {
+    return `https://www.youtube.com/embed/${this.videoId}`;
+  }
+
+  videoTemplate() {
     return html`
-        <alert-modal></alert-modal>
+        <hr/>
+        <h4>${this.videoTitle}</h4>
+        <iframe src=${this.getURL()} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <button
+            @click=${this.handleSendVideoClick}
+        >
+        Enviar
+        </button>
+    `;
+  }
+
+  render() {
+    let startDate = '';
+    let endTime = '';
+    let endWeekday = '';
+    if (store.ongoingRound) {
+      const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
+      startDate = submissionsStartAt.toLocaleDateString();
+      endTime = submissionsEndAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      endWeekday = submissionsEndAt.toLocaleString(undefined, { weekday: 'long' });
+    }
+    return html`
+        <alert-modal
+            id="successModal"
+            .onClose=${() => window.history.pushState(null, '', 'menu')}
+        >
+            Música enviada com sucesso!
+        </alert-modal>
+        <alert-modal
+            .isOpen=${!!this.error}
+            .onClose=${() => { this.error = ''; }}
+        >
+            ${this.error}
+        </alert-modal>
         <default-background>
             <section>
                 <h3>Enviar música</h3>
-                <h4>Semana 18/08/20</h4>
-                <p>O limite para envio da música é até 12h da terça feira</p>
+                <h4>Semana ${startDate}</h4>
+                <p>O limite para envio da música é até ${endTime} de ${endWeekday}</p>
                 <hr/>
-                ${this.videoId && html`<iframe src=${`https://www.youtube.com/embed/${this.videoId}`} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`}
                 <div>
-                    <h4>Enviar segunda música</h4>
+                    <h4>Carregar música</h4>
                     <h6>Insira o link do vídeo do Youtube</h6>
                 </div>
                 <input type="url"/>
                 <!-- @todo implement real callback -->
                 <button @click="${this.handleConfirmationClick}">Carregar</button>
-                ${this.videoId && html`<button @click="${() => this.shadowRoot.querySelector('alert-modal').setAttribute('isOpen', '')}">Enviar</button>`}
+                ${this.videoId && this.videoTemplate()}
             </section>
         </default-background>
     `;

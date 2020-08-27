@@ -67,6 +67,9 @@ export default class AlertModal extends LitElement {
         type: Boolean,
         reflect: true,
       },
+      onClose: {
+        type: Function,
+      },
     };
   }
 
@@ -75,9 +78,9 @@ export default class AlertModal extends LitElement {
             <section class="shell" .style="${this.isOpen ? '' : 'display: none'}">
                 <section class="backdrop"></section>
                 <section class="modal">
-                    <p>Música enviada com sucesso!</p>
+                    <p><slot></slot></p>
                     <!-- @todo implement real callback -->
-                    <button @click="${() => { this.isOpen = false; }}">ok</button>
+                    <button @click="${this.onClose}">ok</button>
                 </section>
             </section>
         `;

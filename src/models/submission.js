@@ -1,14 +1,17 @@
 import { types } from 'mobx-state-tree';
 import { User } from './user';
 import { Evaluation } from './evaluation';
+import { DefaultModel } from './default';
 import { Song } from './song';
 
-export const Submission = types.model({
-  id: types.identifier,
-  submitterId: types.reference(User),
-  songId: types.reference(Song),
-  evaluations: types.array(types.reference(Evaluation)),
-})
+export const Submission = types
+  .compose(DefaultModel)
+  .named('Submission')
+  .props({
+    submitterId: types.reference(User),
+    songId: types.reference(Song),
+    evaluations: types.array(types.reference(Evaluation)),
+  })
   .views((self) => ({
     numberOfEvaluations() {
       return self.evaluations.length;

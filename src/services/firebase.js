@@ -37,3 +37,25 @@ export const handleGoogleSignIn = (e) => {
   const provider = new firebase.auth.GoogleAuthProvider();
   firebase.auth().signInWithRedirect(provider);
 };
+
+export const DateConverter = {
+  fromFirestore(snapshot, options) {
+    const data = snapshot.data(options);
+    const newData = Object.keys(data).reduce((obj, key) => {
+      if (data[key].toDate) {
+        return { ...obj, [key]: data[key].toDate() };
+      }
+      return obj;
+    }, data);
+    return newData;
+  },
+  toFirestore(data) {
+    const newData = Object.keys(data).reduce((obj, key) => {
+      if (data[key] instanceof Date) {
+        return { ...obj, [key]: firebase.firestore.Timestamp.fromDate(data[key]) };
+      }
+      return obj;
+    }, data);
+    return newData;
+  },
+};

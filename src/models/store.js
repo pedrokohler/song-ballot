@@ -1,35 +1,27 @@
 /* eslint-disable no-param-reassign */
 import { types } from 'mobx-state-tree';
-import { db } from '../services/firebase';
+
+import { db, DateConverter } from '../services/firebase';
 import { User } from './user';
 import { Song } from './song';
 import { Submission } from './submission';
 import { Evaluation } from './evaluation';
 import { Round } from './round';
+import { DefaultModel } from './default';
 
-const RoundConverter = {
-  fromFirestore(snapshot, options) {
-    const data = snapshot.data(options);
-    const newData = Object.keys(data).reduce((obj, key) => {
-      if (data[key].toDate) {
-        return { ...obj, [key]: data[key].toDate() };
-      }
-      return obj;
-    }, data);
-    return newData;
-  },
-};
-
-export const RootStore = types.model('RootStore', {
-  authStateChecked: types.boolean,
-  currentUser: types.maybeNull(types.reference(User)),
-  ongoingRound: types.maybe(types.reference(Round)),
-  users: types.map(User),
-  songs: types.map(Song),
-  submissions: types.map(Submission),
-  evaluations: types.map(Evaluation),
-  rounds: types.map(Round),
-})
+export const RootStore = types
+  .compose(DefaultModel)
+  .named('RootStore')
+  .props({
+    authStateChecked: types.boolean,
+    currentUser: types.maybeNull(types.reference(User)),
+    ongoingRound: types.maybe(types.reference(Round)),
+    users: types.map(User),
+    songs: types.map(Song),
+    submissions: types.map(Submission),
+    evaluations: types.map(Evaluation),
+    rounds: types.map(Round),
+  })
   .actions((self) => ({
     addUser({ ...props }) {
       const { id } = props;
@@ -38,6 +30,12 @@ export const RootStore = types.model('RootStore', {
     addSong({ ...props }) {
       const { id } = props;
       self.songs.set(id, Song.create(props));
+      return self.songs.get(id);
+    },
+    addSubmission({ ...props }) {
+      const { id } = props;
+      self.submissions.set(id, Submission.create(props));
+      return self.submissions.get(id);
     },
     addRound({ ...props }) {
       const { id } = props;
@@ -47,14 +45,18 @@ export const RootStore = types.model('RootStore', {
       self.ongoingRound = id;
     },
     getOngoingRound() {
-      db.collection('settings').doc('ongoingRound').get().then((ongoingRoundDoc) => {
-        const { id: ongoingRoundId } = ongoingRoundDoc.data();
-        db.collection('rounds').doc(ongoingRoundId).withConverter(RoundConverter).get()
-          .then((roundDoc) => {
-            const ongoingRound = { id: ongoingRoundId, ...roundDoc.data() };
-            self.addRound(ongoingRound);
-            self.setOngoingRound(ongoingRoundId);
-          });
+      return new Promise((resolve, reject) => {
+        db.collection('settings').doc('ongoingRound').get().then((ongoingRoundDoc) => {
+          const { id: ongoingRoundId } = ongoingRoundDoc.data();
+          db.collection('rounds').doc(ongoingRoundId).withConverter(DateConverter).get()
+            .then((roundDoc) => {
+              const ongoingRound = { id: ongoingRoundId, ...roundDoc.data() };
+              self.addRound(ongoingRound);
+              self.setOngoingRound(ongoingRoundId);
+              return resolve();
+            });
+        })
+          .catch(reject);
       });
     },
     setAuthStateChecked(status) {
