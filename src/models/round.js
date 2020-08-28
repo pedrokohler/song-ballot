@@ -1,3 +1,4 @@
+/* eslint-disable import/no-cycle */
 import { types } from 'mobx-state-tree';
 import { User } from './user';
 import { Song } from './song';
@@ -7,7 +8,7 @@ import { Evaluation } from './evaluation';
 export const Round = types.model({
   id: types.identifier,
   users: types.array(types.reference(User)),
-  songs: types.array(types.reference(Song)),
+  songs: types.array(types.late(() => types.reference(Song))),
   lastWinner: types.reference(User),
   submissions: types.array(types.reference(Submission)),
   evaluations: types.array(types.reference(Evaluation)),

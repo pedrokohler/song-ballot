@@ -1,6 +1,8 @@
 import { LitElement, html, css } from 'lit-element';
 import { observer } from 'mobx-lit-element';
 import { getSnapshot } from 'mobx-state-tree';
+import '@polymer/paper-progress/paper-progress';
+
 import '../components/default-background';
 import '../components/alert-modal';
 import firebase from 'firebase';
@@ -98,6 +100,11 @@ export default class SendSongPage extends observer(LitElement) {
             max-height: 50%;
             margin-bottom: 1em;
         }
+
+        paper-progress {
+          width: 100vw;
+          --paper-progress-active-color: #FBC303;
+        }
     `;
   }
 
@@ -136,14 +143,17 @@ export default class SendSongPage extends observer(LitElement) {
           id: this.videoId,
           url: this.getURL(),
           title: this.videoTitle,
+          round: store.ongoingRound.id,
+          user: store.currentUser.id,
         });
         const song = getSnapshot(songModel);
 
         const submissionModel = store.addSubmission({
           id: store.generateId(),
-          submitterId: store.currentUser.id,
-          songId: this.videoId,
+          submitter: store.currentUser.id,
+          song: this.videoId,
           evaluations: [],
+          round: store.ongoingRound.id,
         });
         const submission = getSnapshot(submissionModel);
 
@@ -165,16 +175,16 @@ export default class SendSongPage extends observer(LitElement) {
           await transaction.set(submissionRef, submission);
           await transaction.update(roundRef, { songs: newSongs });
         }).then(() => {
+          this.songsSent += 1;
+          this.success = true;
           this.shadowRoot.querySelector('#successModal').setAttribute('isOpen', '');
+        }).catch(() => {
+          this.error = 'Houve um problema ao tentar enviar a sua música. Tente novamente mais tarde.';
         });
       }
     })
       .catch((e) => {
-        if (e.message === 'A música que você enviou já foi enviada antes. Tente outra música.') {
-          this.error = e.message;
-          return;
-        }
-        this.error = 'Houve um problema ao tentar enviar a sua música. Tente novamente mais tarde.';
+        this.error = e.message;
       });
   }
 
@@ -189,17 +199,44 @@ export default class SendSongPage extends observer(LitElement) {
       error: {
         type: String,
       },
+      errorFunction: {
+        type: Function,
+      },
+      isLoading: {
+        type: Boolean,
+      },
+      success: {
+        type: Boolean,
+      },
+      songsSent: {
+        type: Number,
+      },
+      songLimit: {
+        type: Number,
+      },
     };
   }
 
   async firstUpdated() {
+    this.songLimit = 1;
+    this.isLoading = true;
     if (!store.ongoingRound) {
       await store.getOngoingRound();
+      await store.loadRoundSongs(store.ongoingRound.id);
+      await store.loadRoundSubmissions(store.ongoingRound.id);
     }
+    this.isLoading = false;
 
     if (store.ongoingRound.lastWinner.id === store.currentUser.id) {
       this.isLastWinner = true;
+      this.songLimit += 1;
     }
+
+    const userSubmissions = Array.from(store.submissions.values())
+      .filter((submission) => submission.submitter.id === store.currentUser.id);
+
+    this.songsSent = userSubmissions.length;
+    this.errorFunction = () => { this.error = ''; };
   }
 
   getURL() {
@@ -220,6 +257,12 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   render() {
+    if (this.isLoading) {
+      return html`
+        <paper-progress class="blue" indeterminate></paper-progress>
+      `;
+    }
+
     let startDate = '';
     let endTime = '';
     let endWeekday = '';
@@ -229,16 +272,22 @@ export default class SendSongPage extends observer(LitElement) {
       endTime = submissionsEndAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
       endWeekday = submissionsEndAt.toLocaleString(undefined, { weekday: 'long' });
     }
+
+    if (this.songsSent >= this.songLimit && !this.success) {
+      this.error = 'Você já enviou o número máximo de músicas para esta rodada';
+      this.errorFunction = () => window.history.replaceState(null, '', 'menu');
+    }
+
     return html`
         <alert-modal
             id="successModal"
             .onClose=${() => window.history.pushState(null, '', 'menu')}
         >
-            Música enviada com sucesso!
+            Música enviada com sucesso! ${this.songsSent < this.songLimit ? 'Você ainda pode enviar mais uma música!' : ''}
         </alert-modal>
         <alert-modal
             .isOpen=${!!this.error}
-            .onClose=${() => { this.error = ''; }}
+            .onClose=${this.errorFunction}
         >
             ${this.error}
         </alert-modal>

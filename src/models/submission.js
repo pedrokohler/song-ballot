@@ -1,16 +1,19 @@
+/* eslint-disable import/no-cycle */
 import { types } from 'mobx-state-tree';
 import { User } from './user';
 import { Evaluation } from './evaluation';
 import { DefaultModel } from './default';
 import { Song } from './song';
+import { Round } from './round';
 
 export const Submission = types
   .compose(DefaultModel)
   .named('Submission')
   .props({
-    submitterId: types.reference(User),
-    songId: types.reference(Song),
+    submitter: types.reference(User),
+    song: types.reference(types.late(() => Song)),
     evaluations: types.array(types.reference(Evaluation)),
+    round: types.reference(types.late(() => Round)),
   })
   .views((self) => ({
     numberOfEvaluations() {

@@ -72,5 +72,31 @@ export const RootStore = types
         self.currentUser = null;
       }
     },
+    loadRoundSongs(roundId) {
+      return new Promise((resolve, reject) => {
+        db.collection('songs').where('round', '==', roundId).withConverter(DateConverter).get()
+          .then((snapshot) => {
+            snapshot.forEach((doc) => {
+              const song = doc.data();
+              self.addSong(song);
+            });
+            resolve();
+          })
+          .catch(reject);
+      });
+    },
+    loadRoundSubmissions(roundId) {
+      return new Promise((resolve, reject) => {
+        db.collection('submissions').where('round', '==', roundId).withConverter(DateConverter).get()
+          .then((snapshot) => {
+            snapshot.forEach((doc) => {
+              const submission = doc.data();
+              self.addSubmission(submission);
+            });
+            resolve();
+          })
+          .catch(reject);
+      });
+    },
 
   }));
