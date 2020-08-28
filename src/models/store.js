@@ -53,7 +53,7 @@ export const RootStore = types
               const ongoingRound = { id: ongoingRoundId, ...roundDoc.data() };
               if (!self.users.get(ongoingRound.lastWinner)) {
                 const lastWinnerDoc = await db.collection('users').doc(ongoingRound.lastWinner).get();
-                self.addUser(lastWinnerDoc.data());
+                self.addUser({ id: lastWinnerDoc.id, ...lastWinnerDoc.data() });
               }
               self.addRound(ongoingRound);
               self.setOngoingRound(ongoingRoundId);
