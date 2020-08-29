@@ -176,7 +176,6 @@ export default class SendSongPage extends observer(LitElement) {
           await transaction.update(roundRef, { songs: newSongs });
         }).then(() => {
           this.songsSent += 1;
-          this.success = true;
           this.shadowRoot.querySelector('#successModal').setAttribute('isOpen', '');
         }).catch(() => {
           this.error = 'Houve um problema ao tentar enviar a sua música. Tente novamente mais tarde.';
@@ -199,13 +198,10 @@ export default class SendSongPage extends observer(LitElement) {
       error: {
         type: String,
       },
-      errorFunction: {
+      onCloseError: {
         type: Function,
       },
       isLoading: {
-        type: Boolean,
-      },
-      success: {
         type: Boolean,
       },
       songsSent: {
@@ -218,25 +214,54 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   async firstUpdated() {
+    this.onCloseError = () => { this.error = ''; };
     this.songLimit = 1;
     this.isLoading = true;
-    if (!store.ongoingRound) {
-      await store.getOngoingRound();
-      await store.loadRoundSongs(store.ongoingRound.id);
-      await store.loadRoundSubmissions(store.ongoingRound.id);
+
+    this.startDate = '';
+    this.endTime = '';
+    this.endWeekday = '';
+
+    try {
+      if (!store.ongoingRound) {
+        await store.getOngoingRound();
+        await store.loadRoundSongs(store.ongoingRound.id);
+        await store.loadRoundSubmissions(store.ongoingRound.id);
+      }
+
+      const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
+
+      this.startDate = submissionsStartAt.toLocaleDateString();
+      this.endTime = submissionsEndAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      this.endWeekday = submissionsEndAt.toLocaleString(undefined, { weekday: 'long' });
+
+      if (Date.now() > submissionsEndAt) {
+        this.error = `O período para enviar músicas acabou ${this.endWeekday} ${this.endTime}.`;
+        this.onCloseError = () => window.history.replaceState(null, '', 'menu');
+        this.isLoading = false;
+        return;
+      }
+
+      if (store.ongoingRound.lastWinner.id === store.currentUser.id) {
+        this.isLastWinner = true;
+        this.songLimit += 1;
+      }
+
+      const userSubmissions = Array.from(store.submissions.values())
+        .filter((submission) => submission.submitter.id === store.currentUser.id);
+
+      this.songsSent = userSubmissions.length;
+
+      if (this.songsSent >= this.songLimit) {
+        this.error = 'Você já enviou o número máximo de músicas para esta rodada';
+        this.onCloseError = () => window.history.replaceState(null, '', 'menu');
+      }
+    } catch (e) {
+      this.onCloseError = () => window.history.replaceState(null, '', 'menu');
+      this.error = e.message;
     }
+
     this.isLoading = false;
-
-    if (store.ongoingRound.lastWinner.id === store.currentUser.id) {
-      this.isLastWinner = true;
-      this.songLimit += 1;
-    }
-
-    const userSubmissions = Array.from(store.submissions.values())
-      .filter((submission) => submission.submitter.id === store.currentUser.id);
-
-    this.songsSent = userSubmissions.length;
-    this.errorFunction = () => { this.error = ''; };
   }
 
   getURL() {
@@ -263,21 +288,6 @@ export default class SendSongPage extends observer(LitElement) {
       `;
     }
 
-    let startDate = '';
-    let endTime = '';
-    let endWeekday = '';
-    if (store.ongoingRound) {
-      const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
-      startDate = submissionsStartAt.toLocaleDateString();
-      endTime = submissionsEndAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-      endWeekday = submissionsEndAt.toLocaleString(undefined, { weekday: 'long' });
-    }
-
-    if (this.songsSent >= this.songLimit && !this.success) {
-      this.error = 'Você já enviou o número máximo de músicas para esta rodada';
-      this.errorFunction = () => window.history.replaceState(null, '', 'menu');
-    }
-
     return html`
         <alert-modal
             id="successModal"
@@ -287,15 +297,15 @@ export default class SendSongPage extends observer(LitElement) {
         </alert-modal>
         <alert-modal
             .isOpen=${!!this.error}
-            .onClose=${this.errorFunction}
+            .onClose=${this.onCloseError}
         >
             ${this.error}
         </alert-modal>
         <default-background>
             <section>
                 <h3>Enviar música</h3>
-                <h4>Semana ${startDate}</h4>
-                <p>O limite para envio da música é até ${endTime} de ${endWeekday}</p>
+                <h4>Semana ${this.startDate}</h4>
+                <p>O limite para envio da música é até ${this.endTime} de ${this.endWeekday}</p>
                 <hr/>
                 <div>
                     <h4>Carregar música</h4>

@@ -42,6 +42,7 @@ export default class AlertModal extends LitElement {
                 justify-content: space-between;
                 border-radius: 3px;
                 padding: 25px;
+                text-align: center;
                 -webkit-animation: slide-down .3s ease-out;
                 -moz-animation: slide-down .3s ease-out;
             }
