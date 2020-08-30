@@ -1,10 +1,13 @@
 import { LitElement, html, css } from 'lit-element';
+import { observer } from 'mobx-lit-element';
 import '../components/default-background';
 import '../components/alert-modal';
 import forwardArrows from '../images/forward-arrows.png';
 import backwardArrows from '../images/backward-arrows.png';
+import { store } from '../store';
+import '@polymer/paper-progress/paper-progress';
 
-export default class VotePage extends LitElement {
+export default class VotePage extends observer(LitElement) {
   static get styles() {
     return css`
         .shell {
@@ -125,31 +128,144 @@ export default class VotePage extends LitElement {
             max-height: 50%;
             margin-bottom: 1em;
         }
+
+        paper-progress {
+            width: 100vw;
+            --paper-progress-active-color: #FBC303;
+        }
     `;
   }
 
+  static get properties() {
+    return {
+      isLoading: {
+        type: Boolean,
+      },
+      submissionIndex: {
+        type: Number,
+      },
+    };
+  }
+
+  constructor() {
+    super();
+    this.isLoading = true;
+  }
+
+  async firstUpdated() {
+    // this.onCloseError = () => { this.error = ''; };
+    this.isLoading = true;
+
+    this.startDate = '';
+    this.endTime = '';
+    this.endWeekday = '';
+
+    this.submissionIndex = 0;
+    try {
+      if (!store.ongoingRound) {
+        await store.getOngoingRound();
+      }
+
+      const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
+
+      this.startDate = submissionsStartAt.toLocaleDateString();
+      this.endTime = evaluationsEndAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      this.endWeekday = evaluationsEndAt.toLocaleString(undefined, { weekday: 'long' });
+
+      if (Date.now() > evaluationsEndAt) {
+        this.error = `O período para enviar músicas acabou ${this.endWeekday} ${this.endTime}.`;
+        this.onCloseError = () => window.history.replaceState(null, '', 'menu');
+        this.isLoading = false;
+        return;
+      }
+
+      if (Date.now() < evaluationsStartAt) {
+        this.error = `O período para enviar músicas começa em ${this.endWeekday} ${this.endTime}.`;
+        this.onCloseError = () => window.history.replaceState(null, '', 'menu');
+        this.isLoading = false;
+        return;
+      }
+
+      const otherUsersSongs = Array.from(store.submissions.values())
+        .filter((sub) => sub.submitter.id !== store.currentUser.id);
+
+      this.submissions = otherUsersSongs;
+    } catch (e) {
+      console.log(e.message);
+    }
+    this.isLoading = false;
+  }
+
+  getInputValue(submissionId) {
+    const value = window.localStorage.getItem(`${submissionId}-${store.currentUser.id}`);
+    return value || '';
+  }
+
+  handleInput(e) {
+    const currentSubmission = this.submissions[this.submissionIndex];
+    window.localStorage.setItem(`${currentSubmission.id}-${store.currentUser.id}`, e.target.value);
+  }
+
+  videoTemplate(submissionIndex) {
+    const currentSubmission = this.submissions[submissionIndex];
+
+    if (!currentSubmission) {
+      return html``;
+    }
+
+    return html`
+        <h4 class="song-title">${currentSubmission.song.title}</h4>
+        <iframe src=${currentSubmission.song.url} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <input
+            type="number" max="10" min="1"
+            @input=${this.handleInput}
+            .value=${this.getInputValue(currentSubmission.id)}
+        />
+        <section class="navigation-section">
+            <button
+                .disabled=${submissionIndex <= 0}
+                class="navigation-btn"
+                @click=${() => { this.submissionIndex -= 1; }}
+            >
+                <img src=${backwardArrows} alt=""/>
+                <span>anterior</span>
+            </button>
+            <button
+                .hidden=${submissionIndex >= this.submissions.length - 1}
+                class="navigation-btn"
+                @click=${() => { this.submissionIndex += 1; }}
+            >
+                <span>próxima</span>
+                <img src=${forwardArrows} alt=""/>
+            </button>
+            <button
+                .hidden=${!(submissionIndex >= this.submissions.length - 1)}
+                class="navigation-btn"
+                @click=${() => { }}
+            >
+                <span>Enviar</span>
+                <img src=${forwardArrows} alt=""/>
+            </button>
+        </section>
+      `;
+  }
+
   render() {
+    if (this.isLoading) {
+      return html`
+        <paper-progress class="blue" indeterminate></paper-progress>
+      `;
+    }
+
     return html`
         <alert-modal></alert-modal>
         <default-background>
             <section class="shell">
                 <h3>Votar</h3>
-                <h4>Semana 18/08/20</h4>
-                <p>O limite para votação é até 20h00 de domingo</p>
+                <h4>Semana ${this.startDate}</h4>
+                <p>O limite para votação é até ${this.endTime} de ${this.endWeekday}</p>
                 <hr/>
-                <h4 class="song-title">Música 1</h4>
-                <iframe src="https://www.youtube.com/embed/nXm2x5IRjt0" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                <input type="number" max="10" min="1"/>
-                <section class="navigation-section">
-                    <button disabled class="navigation-btn">
-                        <img src=${backwardArrows} alt=""/>
-                        <span>anterior</span>
-                    </button>
-                    <button class="navigation-btn">
-                        <span>próxima</span>
-                        <img src=${forwardArrows} alt=""/>
-                    </button>
-                </section>
+                ${this.videoTemplate(this.submissionIndex)}
             </section>
         </default-background>
     `;

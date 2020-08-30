@@ -9,6 +9,7 @@ exports.initializeUser = functions.auth.user().onCreate((user) => {
     uid: id, displayName, email, photoURL,
   } = user;
   admin.firestore().collection('users').doc(id).set({
+    id,
     displayName,
     email,
     photoURL,

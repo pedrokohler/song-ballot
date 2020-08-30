@@ -225,8 +225,6 @@ export default class SendSongPage extends observer(LitElement) {
     try {
       if (!store.ongoingRound) {
         await store.getOngoingRound();
-        await store.loadRoundSongs(store.ongoingRound.id);
-        await store.loadRoundSubmissions(store.ongoingRound.id);
       }
 
       const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
