@@ -1,11 +1,12 @@
 import { LitElement, html, css } from 'lit-element';
 import { observer } from 'mobx-lit-element';
+
+import '@polymer/paper-progress/paper-progress';
 import '../components/default-background';
 import '../components/alert-modal';
 import forwardArrows from '../images/forward-arrows.png';
 import backwardArrows from '../images/backward-arrows.png';
 import { store } from '../store';
-import '@polymer/paper-progress/paper-progress';
 
 export default class VotePage extends observer(LitElement) {
   static get styles() {
@@ -144,6 +145,12 @@ export default class VotePage extends observer(LitElement) {
       submissionIndex: {
         type: Number,
       },
+      onCloseError: {
+        type: Function,
+      },
+      error: {
+        type: String,
+      },
     };
   }
 
@@ -156,7 +163,7 @@ export default class VotePage extends observer(LitElement) {
     // this.onCloseError = () => { this.error = ''; };
     this.isLoading = true;
 
-    this.startDate = '';
+    this.roundStartDate = '';
     this.endTime = '';
     this.endWeekday = '';
 
@@ -168,19 +175,21 @@ export default class VotePage extends observer(LitElement) {
 
       const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
 
-      this.startDate = submissionsStartAt.toLocaleDateString();
+      this.roundStartDate = submissionsStartAt.toLocaleDateString();
       this.endTime = evaluationsEndAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
       this.endWeekday = evaluationsEndAt.toLocaleString(undefined, { weekday: 'long' });
+      this.startTime = evaluationsStartAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      this.startWeekday = evaluationsStartAt.toLocaleString(undefined, { weekday: 'long' });
 
       if (Date.now() > evaluationsEndAt) {
-        this.error = `O período para enviar músicas acabou ${this.endWeekday} ${this.endTime}.`;
+        this.error = `O período para votar acabou ${this.endWeekday} às ${this.endTime}.`;
         this.onCloseError = () => window.history.replaceState(null, '', 'menu');
         this.isLoading = false;
         return;
       }
 
       if (Date.now() < evaluationsStartAt) {
-        this.error = `O período para enviar músicas começa em ${this.endWeekday} ${this.endTime}.`;
+        this.error = `O período para votar começa ${this.startWeekday} às ${this.startTime}.`;
         this.onCloseError = () => window.history.replaceState(null, '', 'menu');
         this.isLoading = false;
         return;
@@ -191,7 +200,8 @@ export default class VotePage extends observer(LitElement) {
 
       this.submissions = otherUsersSongs;
     } catch (e) {
-      console.log(e.message);
+      this.error(e.message);
+      this.onCloseError = () => window.history.replaceState(null, '', 'menu');
     }
     this.isLoading = false;
   }
@@ -207,7 +217,7 @@ export default class VotePage extends observer(LitElement) {
   }
 
   videoTemplate(submissionIndex) {
-    const currentSubmission = this.submissions[submissionIndex];
+    const currentSubmission = this.submissions && this.submissions[submissionIndex];
 
     if (!currentSubmission) {
       return html``;
@@ -258,11 +268,16 @@ export default class VotePage extends observer(LitElement) {
     }
 
     return html`
-        <alert-modal></alert-modal>
+        <alert-modal
+            .isOpen=${!!this.error}
+            .onClose=${this.onCloseError}
+        >
+            ${this.error}
+        </alert-modal>
         <default-background>
             <section class="shell">
                 <h3>Votar</h3>
-                <h4>Semana ${this.startDate}</h4>
+                <h4>Semana ${this.roundStartDate}</h4>
                 <p>O limite para votação é até ${this.endTime} de ${this.endWeekday}</p>
                 <hr/>
                 ${this.videoTemplate(this.submissionIndex)}
