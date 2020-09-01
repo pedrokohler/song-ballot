@@ -33,4 +33,11 @@ export const Submission = types
     isFamous() {
       return self.numberOfEvaluations / this.timesRatedFamous > 0.5;
     },
+  }))
+  .actions((self) => ({
+    addEvaluation(evaluation) {
+      if (!self.evaluations.includes(evaluation)) {
+        self.evaluations.push(evaluation);
+      }
+    },
   }));

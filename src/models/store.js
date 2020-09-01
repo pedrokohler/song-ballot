@@ -41,6 +41,12 @@ export const RootStore = types
       const { id } = props;
       self.rounds.set(id, Round.create(props));
     },
+    addEvaluation({ ...props }) {
+      const { id } = props;
+      const evaluation = Evaluation.create(props);
+      self.evaluations.set(id, evaluation);
+      return evaluation;
+    },
     setOngoingRound(id) {
       self.ongoingRound = id;
     },
@@ -56,6 +62,7 @@ export const RootStore = types
               await self.loadRoundUsers(ongoingRound.users);
               await self.loadRoundSongs(ongoingRoundId);
               await self.loadRoundSubmissions(ongoingRoundId);
+              await self.loadRoundEvaluations(ongoingRoundId);
               return resolve();
             });
         })
@@ -108,6 +115,19 @@ export const RootStore = types
             snapshot.forEach((doc) => {
               const submission = doc.data();
               self.addSubmission(submission);
+            });
+            resolve();
+          })
+          .catch(reject);
+      });
+    },
+    loadRoundEvaluations(roundId) {
+      return new Promise((resolve, reject) => {
+        db.collection('evaluations').where('round', '==', roundId).withConverter(DateConverter).get()
+          .then((snapshot) => {
+            snapshot.forEach((doc) => {
+              const evaluation = doc.data();
+              self.addEvaluation(evaluation);
             });
             resolve();
           })

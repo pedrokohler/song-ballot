@@ -30,4 +30,11 @@ export const Round = types.model({
     lastPlace() {
       return self.submissions.length && self.playerRanking[self.submissions.length - 1];
     },
+  }))
+  .actions((self) => ({
+    addEvaluation(evaluation) {
+      if (!self.evaluations.includes(evaluation)) {
+        self.evaluations.push(evaluation);
+      }
+    },
   }));
