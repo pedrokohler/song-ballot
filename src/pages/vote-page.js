@@ -228,7 +228,15 @@ export default class VotePage extends observer(LitElement) {
       const otherUsersSongs = Array.from(store.submissions.values())
         .filter((sub) => sub.submitter.id !== store.currentUser.id);
 
-      this.submissions = otherUsersSongs;
+      if (otherUsersSongs.length) {
+        this.submissions = otherUsersSongs;
+      } else {
+        this.message = 'Não há músicas para votar.';
+        this.onCloseMessage = () => window.history.replaceState(null, '', 'menu');
+        this.isLoading = false;
+        return;
+      }
+
       this.score = this.getScore();
       this.isFamous = this.getIsFamous();
     } catch (e) {
