@@ -15,6 +15,7 @@ export const RootStore = types
   .props({
     authStateChecked: types.boolean,
     currentUser: types.maybeNull(types.reference(User)),
+    currentGroup: types.maybeNull(types.string), // @todo check if this is the best option
     ongoingRound: types.maybe(types.reference(Round)),
     users: types.map(User),
     songs: types.map(Song),
@@ -50,22 +51,32 @@ export const RootStore = types
     setOngoingRound(id) {
       self.ongoingRound = id;
     },
+    setCurrentGroup(id) {
+      self.currentGroup = id;
+    },
     getOngoingRound() {
       return new Promise((resolve, reject) => {
-        db.collection('settings').doc('ongoingRound').get().then((ongoingRoundDoc) => {
-          const { id: ongoingRoundId } = ongoingRoundDoc.data();
-          db.collection('rounds').doc(ongoingRoundId).withConverter(DateConverter).get()
-            .then(async (roundDoc) => {
-              const ongoingRound = { id: ongoingRoundId, ...roundDoc.data() };
-              self.addRound(ongoingRound);
-              self.setOngoingRound(ongoingRoundId);
-              await self.loadRoundUsers(ongoingRound.users);
-              await self.loadRoundSongs(ongoingRoundId);
-              await self.loadRoundSubmissions(ongoingRoundId);
-              await self.loadRoundEvaluations(ongoingRoundId);
-              return resolve();
-            });
-        })
+        db.collection('groups')
+          .doc(self.currentGroup)
+          .collection('settings')
+          .doc('ongoingRound')
+          .get()
+          .then((ongoingRoundDoc) => {
+            const { id: ongoingRoundId } = ongoingRoundDoc.data();
+            db.collection('groups').doc(self.currentGroup).collection('rounds').doc(ongoingRoundId)
+              .withConverter(DateConverter)
+              .get()
+              .then(async (roundDoc) => {
+                const ongoingRound = { id: ongoingRoundId, ...roundDoc.data() };
+                self.addRound(ongoingRound);
+                self.setOngoingRound(ongoingRoundId);
+                await self.loadRoundUsers(ongoingRound.users);
+                await self.loadRoundSongs(ongoingRoundId);
+                await self.loadRoundSubmissions(ongoingRoundId);
+                await self.loadRoundEvaluations(ongoingRoundId);
+                return resolve();
+              });
+          })
           .catch(reject);
       });
     },
@@ -84,7 +95,10 @@ export const RootStore = types
     },
     loadRoundUsers([...userIds]) {
       return new Promise((resolve, reject) => {
-        db.collection('users').where('id', 'in', userIds).withConverter(DateConverter).get()
+        db.collection('users')
+          .where('id', 'in', userIds)
+          .withConverter(DateConverter)
+          .get()
           .then((snapshot) => {
             snapshot.forEach((doc) => {
               const user = doc.data();
@@ -97,7 +111,12 @@ export const RootStore = types
     },
     loadRoundSongs(roundId) {
       return new Promise((resolve, reject) => {
-        db.collection('songs').where('round', '==', roundId).withConverter(DateConverter).get()
+        db.collection('groups')
+          .doc(self.currentGroup)
+          .collection('songs')
+          .where('round', '==', roundId)
+          .withConverter(DateConverter)
+          .get()
           .then((snapshot) => {
             snapshot.forEach((doc) => {
               const song = doc.data();
@@ -110,7 +129,12 @@ export const RootStore = types
     },
     loadRoundSubmissions(roundId) {
       return new Promise((resolve, reject) => {
-        db.collection('submissions').where('round', '==', roundId).withConverter(DateConverter).get()
+        db.collection('groups')
+          .doc(self.currentGroup)
+          .collection('submissions')
+          .where('round', '==', roundId)
+          .withConverter(DateConverter)
+          .get()
           .then((snapshot) => {
             snapshot.forEach((doc) => {
               const submission = doc.data();
@@ -123,7 +147,12 @@ export const RootStore = types
     },
     loadRoundEvaluations(roundId) {
       return new Promise((resolve, reject) => {
-        db.collection('evaluations').where('round', '==', roundId).withConverter(DateConverter).get()
+        db.collection('groups')
+          .doc(self.currentGroup)
+          .collection('evaluations')
+          .where('round', '==', roundId)
+          .withConverter(DateConverter)
+          .get()
           .then((snapshot) => {
             snapshot.forEach((doc) => {
               const evaluation = doc.data();

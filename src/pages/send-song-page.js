@@ -135,53 +135,55 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   handleSendVideoClick() {
-    db.collection('songs').doc(this.videoId).get().then((doc) => {
-      if (doc.exists) {
-        throw new Error('A música que você enviou já foi enviada antes. Tente outra música.');
-      } else {
-        const songModel = store.addSong({
-          id: this.videoId,
-          url: this.getURL(),
-          title: this.videoTitle,
-          round: store.ongoingRound.id,
-          user: store.currentUser.id,
-        });
-        const song = getSnapshot(songModel);
+    db.collection('groups').doc(store.currentGroup).collection('songs').doc(this.videoId)
+      .get()
+      .then((doc) => {
+        if (doc.exists) {
+          throw new Error('A música que você enviou já foi enviada antes. Tente outra música.');
+        } else {
+          const songModel = store.addSong({
+            id: this.videoId,
+            url: this.getURL(),
+            title: this.videoTitle,
+            round: store.ongoingRound.id,
+            user: store.currentUser.id,
+          });
+          const song = getSnapshot(songModel);
 
-        const submissionModel = store.addSubmission({
-          id: store.generateId(),
-          submitter: store.currentUser.id,
-          song: this.videoId,
-          evaluations: [],
-          round: store.ongoingRound.id,
-        });
-        const submission = getSnapshot(submissionModel);
+          const submissionModel = store.addSubmission({
+            id: store.generateId(),
+            submitter: store.currentUser.id,
+            song: this.videoId,
+            evaluations: [],
+            round: store.ongoingRound.id,
+          });
+          const submission = getSnapshot(submissionModel);
 
-        const songRef = db.collection('songs')
-          .doc(this.videoId)
-          .withConverter(DateConverter);
-        const submissionRef = db.collection('submissions')
-          .doc(submissionModel.id)
-          .withConverter(DateConverter);
-        const roundRef = db.collection('rounds')
-          .doc(store.ongoingRound.id)
-          .withConverter(DateConverter);
+          const songRef = db.collection('groups').doc(store.currentGroup).collection('songs')
+            .doc(this.videoId)
+            .withConverter(DateConverter);
+          const submissionRef = db.collection('groups').doc(store.currentGroup).collection('submissions')
+            .doc(submissionModel.id)
+            .withConverter(DateConverter);
+          const roundRef = db.collection('groups').doc(store.currentGroup).collection('rounds')
+            .doc(store.ongoingRound.id)
+            .withConverter(DateConverter);
 
-        db.runTransaction(async (transaction) => {
-          const round = await transaction.get(roundRef);
-          const oldSongs = round.data().songs || [];
-          const newSongs = [...oldSongs, this.videoId];
-          await transaction.set(songRef, song);
-          await transaction.set(submissionRef, submission);
-          await transaction.update(roundRef, { songs: newSongs });
-        }).then(() => {
-          this.songsSent += 1;
-          this.shadowRoot.querySelector('#successModal').setAttribute('isOpen', '');
-        }).catch(() => {
-          this.error = 'Houve um problema ao tentar enviar a sua música. Tente novamente mais tarde.';
-        });
-      }
-    })
+          db.runTransaction(async (transaction) => {
+            const round = await transaction.get(roundRef);
+            const oldSongs = round.data().songs || [];
+            const newSongs = [...oldSongs, this.videoId];
+            await transaction.set(songRef, song);
+            await transaction.set(submissionRef, submission);
+            await transaction.update(roundRef, { songs: newSongs });
+          }).then(() => {
+            this.songsSent += 1;
+            this.shadowRoot.querySelector('#successModal').setAttribute('isOpen', '');
+          }).catch(() => {
+            this.error = 'Houve um problema ao tentar enviar a sua música. Tente novamente mais tarde.';
+          });
+        }
+      })
       .catch((e) => {
         this.error = e.message;
       });

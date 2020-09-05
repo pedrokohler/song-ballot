@@ -317,7 +317,7 @@ export default class VotePage extends observer(LitElement) {
       const submissionsIds = this.submissions.map((sub) => sub.id);
       const evaluationsIds = evaluations.map((evaluation) => evaluation.id);
 
-      const roundRef = db.collection('rounds')
+      const roundRef = db.collection('groups').doc(store.currentGroup).collection('rounds')
         .doc(store.ongoingRound.id)
         .withConverter(DateConverter);
 
@@ -325,7 +325,8 @@ export default class VotePage extends observer(LitElement) {
         const round = await transaction.get(roundRef);
         const roundEvaluations = round.data().evaluations || [];
         const submissions = await Promise.all(submissionsIds.map(async (id) => {
-          const subRef = db.collection('submissions').doc(id).withConverter(DateConverter);
+          const subRef = db.collection('groups').doc(store.currentGroup).collection('submissions').doc(id)
+            .withConverter(DateConverter);
           const submission = transaction.get(subRef);
           return submission;
         }));
@@ -335,7 +336,8 @@ export default class VotePage extends observer(LitElement) {
           const subEvaluations = subData.evaluations;
           const evaluation = evaluations
             .find((subEvaluation) => subEvaluation.song === subData.song);
-          const evalRef = db.collection('evaluations').doc(evaluation.id).withConverter(DateConverter);
+          const evalRef = db.collection('groups').doc(store.currentGroup).collection('evaluations').doc(evaluation.id)
+            .withConverter(DateConverter);
 
           await transaction
             .update(
@@ -347,6 +349,10 @@ export default class VotePage extends observer(LitElement) {
         await transaction
           .update(roundRef, { evaluations: [...roundEvaluations, ...evaluationsIds] });
       }).then(() => {
+        this.submissions.forEach((sub) => {
+          window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-score`);
+          window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-is-famous`);
+        });
         this.message = 'Voto enviado com sucesso!';
         this.onCloseMessage = () => window.history.replaceState(null, '', 'menu');
       }).catch(() => {

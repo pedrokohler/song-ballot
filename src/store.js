@@ -16,15 +16,21 @@ firebase.auth().onAuthStateChanged((user) => {
       const data = doc.data();
       if (data) {
         const {
-          photoURL, displayName, email,
+          photoURL, displayName, email, groups,
         } = data;
         store.setCurrentUser({
-          photoURL, displayName, id: uid, email,
+          photoURL, displayName, id: uid, email, groups: groups || [],
         });
-      } else {
+        // @todo fix this so that user can select group
+        store.setCurrentGroup(groups[0]);
+      } else { // first log in
         const { photoURL, displayName, email } = user;
         store.setCurrentUser({
-          photoURL, displayName, id: uid, email,
+          photoURL,
+          displayName,
+          id: uid,
+          email,
+          groups: [], // @todo must assure that there's a group
         });
       }
       store.setAuthStateChecked(true);

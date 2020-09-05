@@ -6,13 +6,14 @@ admin.initializeApp();
 
 exports.initializeUser = functions.auth.user().onCreate((user) => {
   const {
-    uid: id, displayName, email, photoURL,
+    uid: id, displayName, email, photoURL
   } = user;
   admin.firestore().collection('users').doc(id).set({
     id,
     displayName,
     email,
     photoURL,
+    groups: []
   });
 });
 

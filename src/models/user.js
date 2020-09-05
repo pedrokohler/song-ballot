@@ -5,4 +5,5 @@ export const User = types.model('User', {
   displayName: types.string,
   email: types.string,
   photoURL: types.string,
+  groups: types.array(types.string),
 });

@@ -5,6 +5,7 @@ import '@polymer/paper-progress/paper-progress';
 import { store } from '../store';
 import { handleGoogleSignIn } from '../services/firebase';
 import '../components/google-sing-in-button';
+import '../components/alert-modal';
 
 // eslint-disable-next-line no-unused-vars
 import Background from '../images/background.jpg'; // so that webpack loads the image
@@ -74,6 +75,16 @@ export default class LoginPage extends observer(LitElement) {
               </section>
             </section>
           `;
+    }
+
+    if (!store.currentGroup) {
+      return html`
+      <alert-modal
+        isOpen
+        .onClose=${() => window.history.pushState(null, '', 'logout')}
+      >
+        Você precisa ser incluído em um grupo. Solicite a sua inclusão antes de prosseguir.
+      </alert-modal>`;
     }
 
     window.history.pushState(null, '', 'menu');
