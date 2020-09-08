@@ -64,6 +64,7 @@ module.exports = {
       favicon: `${paths.static}/favicon.png`,
       template: `${paths.src}/404.html`, // template file
       filename: '404.html', // output file
+      chunks: [],
     }),
   ],
 
