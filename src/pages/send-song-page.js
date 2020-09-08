@@ -19,7 +19,6 @@ export default class SendSongPage extends observer(LitElement) {
             width: 90%;
             min-width: 300px;
             max-width: 600px;
-            background-color: #FBFBD3;
             background-color: #FFFFFF;
             margin-bottom: 20px;
             display: flex;
@@ -242,7 +241,8 @@ export default class SendSongPage extends observer(LitElement) {
         return;
       }
 
-      if (store.ongoingRound.lastWinner.id === store.currentUser.id) {
+      if (store.ongoingRound.lastWinner
+        && store.ongoingRound.lastWinner.id === store.currentUser.id) {
         this.isLastWinner = true;
         this.songLimit += 1;
       }

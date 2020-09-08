@@ -9,7 +9,7 @@ export const Round = types.model({
   id: types.identifier,
   users: types.array(types.reference(User)),
   songs: types.array(types.late(() => types.reference(Song))),
-  lastWinner: types.reference(User),
+  lastWinner: types.maybeNull(types.reference(User)),
   submissions: types.array(types.reference(Submission)),
   evaluations: types.array(types.reference(Evaluation)),
   submissionsStartAt: types.Date,

@@ -20,7 +20,7 @@ export default class VotePage extends observer(LitElement) {
             width: 90%;
             min-width: 300px;
             max-width: 600px;
-            background-color: #FBFBD3;
+            background-color: #FFFFFF;
             margin-bottom: 20px;
             display: flex;
             flex-direction: column;
@@ -254,9 +254,12 @@ export default class VotePage extends observer(LitElement) {
   }
 
   getScore() {
-    const currentSubmission = this.submissions[this.submissionIndex];
-    const value = window.localStorage.getItem(`${currentSubmission.id}-${store.currentUser.id}-score`);
-    return value || '';
+    const currentSubmission = this.submissions && this.submissions[this.submissionIndex];
+    if (currentSubmission) {
+      const value = window.localStorage.getItem(`${currentSubmission.id}-${store.currentUser.id}-score`);
+      return value || '';
+    }
+    return '';
   }
 
   getIsFamous() {
@@ -347,7 +350,10 @@ export default class VotePage extends observer(LitElement) {
           await transaction.set(evalRef, evaluation);
         });
         await transaction
-          .update(roundRef, { evaluations: [...roundEvaluations, ...evaluationsIds] });
+          .update(roundRef, {
+            evaluations: [...roundEvaluations, ...evaluationsIds],
+            voteCount: round.data().voteCount + 1,
+          });
       }).then(() => {
         this.submissions.forEach((sub) => {
           window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-score`);
