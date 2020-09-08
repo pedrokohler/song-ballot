@@ -59,11 +59,6 @@ export default class LoginPage extends observer(LitElement) {
     const urlParams = new URLSearchParams(window.location.search);
     const redirectTo = urlParams.get('redirectTo');
 
-    if (redirectTo) {
-      window.history.pushState(null, '', redirectTo);
-      return '';
-    }
-
     if (!store.authStateChecked) {
       return html`
       <section>
@@ -95,7 +90,7 @@ export default class LoginPage extends observer(LitElement) {
       </alert-modal>`;
     }
 
-    window.history.pushState(null, '', 'menu');
+    window.history.pushState(null, '', redirectTo || 'menu');
     return '';
   }
 }
