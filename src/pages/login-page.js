@@ -56,6 +56,11 @@ export default class LoginPage extends observer(LitElement) {
   }
 
   render() {
+    if (window.history.state) {
+      window.history.pushState(null, '', window.history.state.redirectTo);
+      return '';
+    }
+
     if (!store.authStateChecked) {
       return html`
       <section>

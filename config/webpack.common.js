@@ -59,6 +59,12 @@ module.exports = {
       template: `${paths.src}/template.html`, // template file
       filename: 'index.html', // output file
     }),
+    new HtmlWebpackPlugin({
+      title: 'Song Ballot',
+      favicon: `${paths.static}/favicon.png`,
+      template: `${paths.src}/404.html`, // template file
+      filename: '404.html', // output file
+    }),
   ],
 
   /**

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= htmlWebpackPlugin.options.title %></title>
+</head>
+
+<body>
+    <script>
+        const path = window.location.pathname;
+        const filteredPath = path.split('/')[1];
+        window.history.pushState({ redirectTo: filteredPath }, '', '');
+    </script>
+</body>
+
+</html>
