@@ -56,8 +56,11 @@ export default class LoginPage extends observer(LitElement) {
   }
 
   render() {
-    if (window.history.state) {
-      window.history.pushState(null, '', window.history.state.redirectTo);
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectTo = urlParams.get('redirectTo');
+
+    if (redirectTo) {
+      window.history.pushState(null, '', redirectTo);
       return '';
     }
 
