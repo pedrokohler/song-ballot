@@ -11,8 +11,8 @@
     <a href=<%= htmlWebpackPlugin.files.publicPath %>></a>
     <script>
         const basePath = document.querySelector('a').href;
-        const path = window.location.pathname;
-        const filteredPath = path.split('/')[1];
+        const path = window.location.pathname.split('/');
+        const filteredPath = path[path.length - 1];
         window.history.pushState({ redirectTo: filteredPath }, '', basePath);
     </script>
 </body>
