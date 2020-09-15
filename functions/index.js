@@ -129,7 +129,7 @@ const getRoundWinner = async (groupId, roundId) => {
 
   const results = evaluations.docs.reduce((results, doc) => {
     const ev = doc.data();
-    const songId = ev.song.id;
+    const songId = ev.song;
     if (results[songId]) {
       results[songId].points += ev.score;
       results[songId].votes.push(ev.score);
@@ -155,7 +155,7 @@ const getRoundWinner = async (groupId, roundId) => {
     return results;
   }, {});
 
-  const lastWinner = Object.values(results).sort((a, b) => a.finalScore < b.finalScore)[0];
+  const lastWinner = Object.values(results).sort((a, b) => b.finalScore - a.finalScore)[0];
   return lastWinner.user;
 }
 
