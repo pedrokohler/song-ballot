@@ -58,11 +58,9 @@ export const RootStore = types
       return new Promise((resolve, reject) => {
         db.collection('groups')
           .doc(self.currentGroup)
-          .collection('settings')
-          .doc('ongoingRound')
           .get()
-          .then((ongoingRoundDoc) => {
-            const { id: ongoingRoundId } = ongoingRoundDoc.data();
+          .then((groupDoc) => {
+            const { ongoingRound: ongoingRoundId } = groupDoc.data();
             db.collection('groups').doc(self.currentGroup).collection('rounds').doc(ongoingRoundId)
               .withConverter(DateConverter)
               .get()

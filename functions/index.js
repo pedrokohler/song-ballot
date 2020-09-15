@@ -70,9 +70,26 @@ exports.controlSubmissionLimits = functions.firestore
   }
 });
 
+// exports.roundCronJob = functions.pubsub
+// .schedule('every sunday 20:01')
+// .timeZone('America/Sao_Paulo')
+// .onRun(async (context) => {
+//   const groups = await admin.firestore().collection('groups').get();
+//   groups.docs.forEach(group => {
+//     const { id: groupId } = group;
+//     const { ongoingRound } = gorup.data();
+//     const round = await admin.firestore()
+//       .collection('groups')
+//       .doc(groupId)
+//       .collection('rounds')
+//       .doc(ongoingRound)
+//       .get();
+    
+//   })
+// })
+
 
 exports.controlEvaluationLimits = functions.firestore
-//Está criando rounds duplicados porque criam-se vários evaluations no final da votação
 .document("groups/{groupId}/rounds/{roundId}")
 .onWrite(async (change, context) => {
   const { groupId, roundId: ongoingRound } = context.params;
@@ -92,23 +109,55 @@ exports.controlEvaluationLimits = functions.firestore
 
   const { users } = round.data();
 
-  const evaluations = await admin.firestore()
-  .collection('groups')
-  .doc(groupId)
-  .collection('evaluations')
-  .where('round', '==', ongoingRound)
-  .get();
-
-
   const everyoneVoted = users.length === voteCount
 
   if(everyoneVoted) {
     const now = admin.firestore.FieldValue.serverTimestamp();
     await roundRef.update({ evaluationsEndAt: now });
-    // await calculateRoundResults();
-    await startNewRound(groupId, "3v4606jtucM7GlXBGO4IBgHycdI2");
+    const lastWinner = await getRoundWinner(groupId, ongoingRound);
+    await startNewRound(groupId, lastWinner);
   }
 });
+
+const getRoundWinner = async (groupId, roundId) => {
+  const evaluations = await admin.firestore()
+  .collection('groups')
+  .doc(groupId)
+  .collection('evaluations')
+  .where('round', '==', roundId)
+  .get();
+
+  const results = evaluations.docs.reduce((results, doc) => {
+    const ev = doc.data();
+    const songId = ev.song.id;
+    if (results[songId]) {
+      results[songId].points += ev.score;
+      results[songId].votes.push(ev.score);
+      results[songId].ratedFamous += ev.ratedFamous ? 1 : 0;
+      results[songId].timesVoted++;
+      results[songId].penalty = results[songId].ratedFamous / results[songId].timesVoted > 0.5 ? -1 : 0;
+      results[songId].finalScore = Math.round(
+          (results[songId].points / results[songId].timesVoted + Number.EPSILON) * 100
+        ) / 100 + results[songId].penalty;
+    } else {
+      const penalty = ev.ratedFamous ? -1: 0;
+      results[songId] = {
+        user: ev.evaluatee,
+        video: `https://youtube.com/watch?v=${songId}`,
+        votes: [ev.score],
+        ratedFamous: ev.ratedFamous ? 1 : 0,
+        penalty: penalty,
+        points: ev.score + penalty,
+        timesVoted: 1,
+        finalScore: ev.score,
+      };
+    }
+    return results;
+  }, {});
+
+  const lastWinner = Object.values(results).sort((a, b) => a.finalScore < b.finalScore)[0];
+  return lastWinner.user;
+}
 
 
 const startNewRound = async (groupId, lastWinner) => {
@@ -131,8 +180,8 @@ const startNewRound = async (groupId, lastWinner) => {
     voteCount: 0
   });
 
-  await groupRef.collection('settings').doc('ongoingRound').set({
-    id: round.id,
+  await groupRef.update({
+    ongoingRound: round.id,
   });
 }
 

@@ -19,16 +19,17 @@ export const Round = types.model({
 })
   .views((self) => ({
     playerRanking() {
-      return self.submissions.sort((a, b) => b.points - a.points);
+      return self.submissions.sort((a, b) => b.points() - a.points());
     },
     firstPlace() {
-      return self.playerRanking && self.playerRanking[0];
+      return self.playerRanking() && self.playerRanking()[0];
     },
     secondPlace() {
-      return self.playerRanking && self.playerRanking[1];
+      return self.playerRanking && self.playerRanking()[1];
     },
     lastPlace() {
-      return self.submissions.length && self.playerRanking[self.submissions.length - 1];
+      return self.submissions.length
+        && self.playerRanking()[self.submissions.length - 1];
     },
   }))
   .actions((self) => ({

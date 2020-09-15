@@ -125,9 +125,13 @@ export default class SendSongPage extends observer(LitElement) {
     const userInput = this.shadowRoot.querySelector('input[type=url]').value;
     const videoId = this.getYoutubeVideoId(userInput);
     if (videoId) {
-      const title = await this.getYoutubeVideoTitle(videoId);
-      this.videoTitle = title;
-      this.videoId = videoId;
+      try {
+        const title = await this.getYoutubeVideoTitle(videoId);
+        this.videoTitle = title;
+        this.videoId = videoId;
+      } catch (e) {
+        this.error = e.message;
+      }
     } else {
       this.error = 'O URL que você inseriu não é valido.';
     }
@@ -171,10 +175,12 @@ export default class SendSongPage extends observer(LitElement) {
           db.runTransaction(async (transaction) => {
             const round = await transaction.get(roundRef);
             const oldSongs = round.data().songs || [];
+            const oldSubmissions = round.data().submissions || [];
             const newSongs = [...oldSongs, this.videoId];
+            const newSubmissions = [...oldSubmissions, submission.id];
             await transaction.set(songRef, song);
             await transaction.set(submissionRef, submission);
-            await transaction.update(roundRef, { songs: newSongs });
+            await transaction.update(roundRef, { songs: newSongs, submissions: newSubmissions });
           }).then(() => {
             this.songsSent += 1;
             this.shadowRoot.querySelector('#successModal').setAttribute('isOpen', '');
