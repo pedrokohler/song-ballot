@@ -138,6 +138,7 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   handleSendVideoClick() {
+    this.buttonDisabled = true;
     db.collection('groups').doc(store.currentGroup).collection('songs').doc(this.videoId)
       .get()
       .then((doc) => {
@@ -185,11 +186,13 @@ export default class SendSongPage extends observer(LitElement) {
             this.songsSent += 1;
             this.shadowRoot.querySelector('#successModal').setAttribute('isOpen', '');
           }).catch(() => {
+            this.buttonDisabled = false;
             this.error = 'Houve um problema ao tentar enviar a sua música. Tente novamente mais tarde.';
           });
         }
       })
       .catch((e) => {
+        this.buttonDisabled = false;
         this.error = e.message;
       });
   }
@@ -198,6 +201,9 @@ export default class SendSongPage extends observer(LitElement) {
     return {
       videoId: {
         type: String,
+      },
+      buttonDisabled: {
+        type: Boolean,
       },
       videoTitle: {
         type: String,
@@ -224,6 +230,7 @@ export default class SendSongPage extends observer(LitElement) {
     this.onCloseError = () => { this.error = ''; };
     this.songLimit = 1;
     this.isLoading = true;
+    this.buttonDisabled = false;
 
     this.startDate = '';
     this.endTime = '';
@@ -281,6 +288,7 @@ export default class SendSongPage extends observer(LitElement) {
         <iframe src=${this.getURL()} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         <button
             @click=${this.handleSendVideoClick}
+            .disabled=${this.buttonDisabled}
         >
         Enviar
         </button>
