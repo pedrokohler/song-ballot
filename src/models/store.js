@@ -91,21 +91,26 @@ export const RootStore = types
         self.currentUser = null;
       }
     },
-    loadRoundUsers([...userIds]) {
-      return new Promise((resolve, reject) => {
-        db.collection('users')
-          .where('id', 'in', userIds)
-          .withConverter(DateConverter)
-          .get()
-          .then((snapshot) => {
-            snapshot.forEach((doc) => {
-              const user = doc.data();
-              self.addUser(user);
-            });
-            resolve();
-          })
-          .catch(reject);
-      });
+    async loadRoundUsers([...userIds]) {
+      // @todo: refactor function
+      const loadBatch = (batch) => db.collection('users')
+        .where('id', 'in', batch)
+        .withConverter(DateConverter).get()
+        .then((snapshot) => {
+          snapshot.forEach((doc) => self.addUser(doc.data()));
+        });
+
+      const batchSize = 10;
+      let i = 0;
+      let batch;
+      do {
+        batch = userIds.slice(i, i + batchSize);
+        if (batch.length) {
+          // eslint-disable-next-line no-await-in-loop
+          await loadBatch(batch);
+        }
+        i += batchSize;
+      } while (batch.length);
     },
     loadRoundSongs(roundId) {
       return new Promise((resolve, reject) => {
