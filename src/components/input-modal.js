@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit-element';
 
-export default class AlertModal extends LitElement {
+export default class InputModal extends LitElement {
   static get styles() {
     return css`
             .shell {
@@ -33,7 +33,7 @@ export default class AlertModal extends LitElement {
                 transform: translate(-50%, -50%);
                 max-width: 300px;
                 width: 70%;
-                height: 150px;
+                height: 200px;
                 background-color: #FBFBD3;
                 z-index: 1001;
                 display: flex;
@@ -59,6 +59,10 @@ export default class AlertModal extends LitElement {
                 vertical-align: baseline;
                 cursor: pointer;
             }
+
+            input {
+              margin-bottom: 1em;
+            }
         `;
   }
 
@@ -67,6 +71,9 @@ export default class AlertModal extends LitElement {
       isOpen: {
         type: Boolean,
         reflect: true,
+      },
+      inputText: {
+        type: String,
       },
       onClose: {
         type: Function,
@@ -80,6 +87,7 @@ export default class AlertModal extends LitElement {
                 <section class="backdrop"></section>
                 <section class="modal">
                     <p><slot></slot></p>
+                    <input type="text" value="${this.inputText}"/>
                     <button @click="${this.onClose}">ok</button>
                 </section>
             </section>
@@ -87,4 +95,4 @@ export default class AlertModal extends LitElement {
   }
 }
 
-customElements.define('alert-modal', AlertModal);
+customElements.define('input-modal', InputModal);

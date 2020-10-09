@@ -11,7 +11,7 @@ if (DEV_ENVIRONMENT) {
     databaseURL: 'https://song-ballot-dev.firebaseio.com',
     projectId: 'song-ballot-dev',
     storageBucket: 'song-ballot-dev.appspot.com',
-    messagingSenderId: '605648762660',
+    // messagingSenderId: '605648762660',
     appId: '1:605648762660:web:551ffe5aeda24b94fd25b1',
   };
 } else {
@@ -21,7 +21,7 @@ if (DEV_ENVIRONMENT) {
     databaseURL: 'https://song-ballot-95754.firebaseio.com',
     projectId: 'song-ballot-95754',
     storageBucket: 'song-ballot-95754.appspot.com',
-    messagingSenderId: '474008793798',
+    // messagingSenderId: '474008793798',
     appId: '1:474008793798:web:039994ff043b95de4fddc7',
   };
 }
