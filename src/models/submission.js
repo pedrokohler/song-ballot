@@ -16,22 +16,22 @@ export const Submission = types
     round: types.reference(types.late(() => Round)),
   })
   .views((self) => ({
-    numberOfEvaluations() {
+    get numberOfEvaluations() {
       return self.evaluations.length;
     },
-    timesRatedFamous() {
+    get timesRatedFamous() {
       return self.evaluations.reduce((total, ev) => (ev.ratedFamous ? total + 1 : total), 0);
     },
-    total() {
+    get total() {
       return self.evaluations.reduce((total, ev) => total + ev.score, 0);
     },
-    points() {
-      const penalty = self.isFamous() ? 1 : 0;
-      const basePoints = self.numberOfEvaluations() ? self.total() / self.numberOfEvaluations() : 0;
+    get points() {
+      const penalty = self.isFamous ? 1 : 0;
+      const basePoints = self.numberOfEvaluations ? self.total / self.numberOfEvaluations : 0;
       return basePoints - penalty;
     },
-    isFamous() {
-      return self.numberOfEvaluations() / this.timesRatedFamous() > 0.5;
+    get isFamous() {
+      return self.numberOfEvaluations / self.timesRatedFamous > 0.5;
     },
   }))
   .actions((self) => ({

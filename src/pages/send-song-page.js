@@ -5,6 +5,7 @@ import '@polymer/paper-progress/paper-progress';
 
 import '../components/default-background';
 import '../components/alert-modal';
+import '../components/input-modal';
 import firebase from 'firebase';
 import { db, DateConverter } from '../services/firebase';
 import { store } from '../store';
@@ -122,19 +123,27 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   async handleConfirmationClick() {
+    this.buttonDisabled = true;
     const userInput = this.shadowRoot.querySelector('input[type=url]').value;
     const videoId = this.getYoutubeVideoId(userInput);
     if (videoId) {
       try {
-        const title = await this.getYoutubeVideoTitle(videoId);
+        let title = '';
+        if (this.titleError) {
+          title = this.inputTitle;
+        } else {
+          title = await this.getYoutubeVideoTitle(videoId);
+        }
         this.videoTitle = title;
         this.videoId = videoId;
       } catch (e) {
-        this.error = e.message;
+        this.titleError = true;
+        this.showVideoTitleModal = true;
       }
     } else {
       this.error = 'O URL que você inseriu não é valido.';
     }
+    this.buttonDisabled = false;
   }
 
   handleSendVideoClick() {
@@ -217,6 +226,12 @@ export default class SendSongPage extends observer(LitElement) {
       isLoading: {
         type: Boolean,
       },
+      showVideoTitleModal: {
+        type: Boolean,
+      },
+      inputTitle: {
+        type: String,
+      },
       songsSent: {
         type: Number,
       },
@@ -231,6 +246,7 @@ export default class SendSongPage extends observer(LitElement) {
     this.songLimit = 1;
     this.isLoading = true;
     this.buttonDisabled = false;
+    this.inputTitle = '';
 
     this.startDate = '';
     this.endTime = '';
@@ -295,6 +311,15 @@ export default class SendSongPage extends observer(LitElement) {
     `;
   }
 
+  handleInputModalClose() {
+    const inputModal = this.shadowRoot.querySelector('input-modal');
+    const input = inputModal.shadowRoot.querySelector('input');
+    if (input.value) {
+      this.inputTitle = input.value;
+      this.showVideoTitleModal = false;
+    }
+  }
+
   render() {
     if (this.isLoading) {
       return html`
@@ -303,6 +328,13 @@ export default class SendSongPage extends observer(LitElement) {
     }
 
     return html`
+        <input-modal
+          inputText=""
+          .isOpen=${this.showVideoTitleModal}
+          .onClose=${this.handleInputModalClose.bind(this)}
+        >
+         Houve um problema ao carregar o título do vídeo. Digite o título manualmente e carregue o vídeo mais uma vez.
+        </input-modal>
         <alert-modal
             id="successModal"
             .onClose=${() => window.history.pushState(null, '', 'menu')}
@@ -327,7 +359,10 @@ export default class SendSongPage extends observer(LitElement) {
                 </div>
                 <input type="url"/>
                 <!-- @todo implement real callback -->
-                <button @click="${this.handleConfirmationClick}">Carregar</button>
+                <button
+                  @click="${this.handleConfirmationClick}"
+                  .disabled=${this.buttonDisabled}
+                >Carregar</button>
                 ${this.videoId && this.videoTemplate()}
             </section>
         </default-background>

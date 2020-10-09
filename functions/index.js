@@ -39,7 +39,7 @@ exports.getYoutubeTitle = functions.https.onCall((data, context) => {
 
 exports.controlSubmissionLimits = functions.firestore
 .document("groups/{groupId}/submissions/{submissionId}")
-.onWrite(async (change, context) => {
+.onCreate(async (change, context) => {
   const { groupId } = context.params;
   const { round: ongoingRound} = change.after.data();
 

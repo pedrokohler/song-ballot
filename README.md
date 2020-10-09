@@ -1,6 +1,6 @@
 # Song Ballot
 
-See the [demo version](https://pedrokohler.github.io/ms-bruxao/)
+See the [demo version](https://pedrokohler.github.io/song-ballot)
 
 Have fun with your friends with Song Ballot, a real project based on a game that I had with a group of friends.
 Initially we used google forms, google sheets and 2 whatsapp groups to play. Given the complications that came about with this method, I decided to create a simple application to solve this issue.
@@ -9,9 +9,9 @@ The game is simple:
 
 1- Every week each participant registers a song
 
-2- Each participant evaluates all but his songs with a 1 to 10 note
+2- Each participant evaluates all but his songs with 1 to 10 points
 
-3- The best scoring song wins. The person who sent the song can send an extra song the next week.
+3- The best scoring song wins. The person who sent the song can send an extra song the next week
 
 ## Installation
 

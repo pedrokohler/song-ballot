@@ -18,18 +18,18 @@ export const Round = types.model({
   evaluationsEndAt: types.Date,
 })
   .views((self) => ({
-    playerRanking() {
-      return self.submissions.sort((a, b) => b.points() - a.points());
+    get playerRanking() {
+      return self.submissions?.slice().sort((a, b) => b.points - a.points);
     },
-    firstPlace() {
-      return self.playerRanking() && self.playerRanking()[0];
+    get firstPlace() {
+      return self.playerRanking?.[0];
     },
-    secondPlace() {
-      return self.playerRanking && self.playerRanking()[1];
+    get secondPlace() {
+      return self.playerRanking?.[1];
     },
-    lastPlace() {
-      return self.submissions.length
-        && self.playerRanking()[self.submissions.length - 1];
+    get lastPlace() {
+      const lastIndex = self.submissions?.length - 1;
+      return lastIndex >= 0 && self.playerRanking?.[lastIndex];
     },
   }))
   .actions((self) => ({
