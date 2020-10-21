@@ -37,7 +37,7 @@ export const Submission = types
   .actions((self) => ({
     addEvaluation(evaluation) {
       if (!self.evaluations.includes(evaluation)) {
-        self.evaluations = { ...self.evaluations, evaluation };
+        self.evaluations = [...self.evaluations, evaluation];
       }
     },
   }));
