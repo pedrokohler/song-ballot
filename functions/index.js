@@ -39,9 +39,9 @@ exports.getYoutubeTitle = functions.https.onCall((data, context) => {
 
 exports.controlSubmissionLimits = functions.firestore
 .document("groups/{groupId}/submissions/{submissionId}")
-.onCreate(async (change, context) => {
+.onCreate(async (snapshot, context) => {
   const { groupId } = context.params;
-  const { round: ongoingRound} = change.after.data();
+  const { round: ongoingRound } = snapshot.data();
 
   const roundRef = admin.firestore()
   .collection('groups')
