@@ -1,14 +1,14 @@
-import { LitElement, html, css } from 'lit-element';
-import { observer } from 'mobx-lit-element';
-import { getSnapshot } from 'mobx-state-tree';
+import { LitElement, html, css } from "lit-element";
+import { observer } from "mobx-lit-element";
+import { getSnapshot } from "mobx-state-tree";
 
-import '@polymer/paper-progress/paper-progress';
-import '../components/default-background';
-import '../components/alert-modal';
-import forwardArrows from '../images/forward-arrows.png';
-import backwardArrows from '../images/backward-arrows.png';
-import { store } from '../store';
-import { db, DateConverter } from '../services/firebase';
+import "@polymer/paper-progress/paper-progress";
+import "../components/default-background";
+import "../components/alert-modal";
+import forwardArrows from "../images/forward-arrows.png";
+import backwardArrows from "../images/backward-arrows.png";
+import { store } from "../store";
+import { db, DateConverter } from "../services/firebase";
 
 export default class VotePage extends observer(LitElement) {
   static get styles() {
@@ -180,12 +180,12 @@ export default class VotePage extends observer(LitElement) {
     this.buttonDisabled = false;
     this.isLoading = true;
     this.seeOverview = false;
-    this.onCloseMessage = () => { this.message = ''; };
+    this.onCloseMessage = () => { this.message = ""; };
     this.isLoading = true;
 
-    this.roundStartDate = '';
-    this.endTime = '';
-    this.endWeekday = '';
+    this.roundStartDate = "";
+    this.endTime = "";
+    this.endWeekday = "";
 
     this.submissionIndex = 0;
   }
@@ -199,21 +199,21 @@ export default class VotePage extends observer(LitElement) {
       const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
 
       this.roundStartDate = submissionsStartAt.toLocaleDateString();
-      this.endTime = evaluationsEndAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-      this.endWeekday = evaluationsEndAt.toLocaleString(undefined, { weekday: 'long' });
-      this.startTime = evaluationsStartAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-      this.startWeekday = evaluationsStartAt.toLocaleString(undefined, { weekday: 'long' });
+      this.endTime = evaluationsEndAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+      this.endWeekday = evaluationsEndAt.toLocaleString(undefined, { weekday: "long" });
+      this.startTime = evaluationsStartAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+      this.startWeekday = evaluationsStartAt.toLocaleString(undefined, { weekday: "long" });
 
       if (Date.now() > evaluationsEndAt) {
         this.message = `O período para votar acabou ${this.endWeekday} às ${this.endTime}.`;
-        this.onCloseMessage = () => window.history.replaceState(null, '', 'menu');
+        this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
         this.isLoading = false;
         return;
       }
 
       if (Date.now() < evaluationsStartAt) {
         this.message = `O período para votar começa ${this.startWeekday} às ${this.startTime}.`;
-        this.onCloseMessage = () => window.history.replaceState(null, '', 'menu');
+        this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
         this.isLoading = false;
         return;
       }
@@ -223,8 +223,8 @@ export default class VotePage extends observer(LitElement) {
         .find((evaluation) => evaluation.evaluator.id === store.currentUser.id);
 
       if (userAlreadyEvaluated) {
-        this.message = 'Você já votou esta semana.';
-        this.onCloseMessage = () => window.history.replaceState(null, '', 'menu');
+        this.message = "Você já votou esta semana.";
+        this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
         this.isLoading = false;
         return;
       }
@@ -235,8 +235,8 @@ export default class VotePage extends observer(LitElement) {
       if (otherUsersSongs.length) {
         this.submissions = otherUsersSongs;
       } else {
-        this.message = 'Não há músicas para votar.';
-        this.onCloseMessage = () => window.history.replaceState(null, '', 'menu');
+        this.message = "Não há músicas para votar.";
+        this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
         this.isLoading = false;
         return;
       }
@@ -245,13 +245,13 @@ export default class VotePage extends observer(LitElement) {
       this.isFamous = this.getIsFamous();
     } catch (e) {
       this.message = e.message;
-      this.onCloseMessage = () => window.history.replaceState(null, '', 'menu');
+      this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
     }
     this.isLoading = false;
   }
 
   updated(changedProperties) {
-    if (changedProperties.has('submissionIndex')) {
+    if (changedProperties.has("submissionIndex")) {
       this.score = this.getScore();
       this.isFamous = this.getIsFamous();
     }
@@ -261,15 +261,15 @@ export default class VotePage extends observer(LitElement) {
     const currentSubmission = this.submissions && this.submissions[this.submissionIndex];
     if (currentSubmission) {
       const value = window.localStorage.getItem(`${currentSubmission.id}-${store.currentUser.id}-score`);
-      return value || '';
+      return value || "";
     }
-    return '';
+    return "";
   }
 
   getIsFamous() {
     const currentSubmission = this.submissions[this.submissionIndex];
     const value = window.localStorage.getItem(`${currentSubmission.id}-${store.currentUser.id}-is-famous`);
-    if (value === 'true') {
+    if (value === "true") {
       return true;
     }
     return false;
@@ -285,7 +285,7 @@ export default class VotePage extends observer(LitElement) {
     const { value } = e.target;
     let newValue;
 
-    if ((Number.isInteger(value) && value >= 1 && value <= 10) || value === '') {
+    if ((Number.isInteger(value) && value >= 1 && value <= 10) || value === "") {
       newValue = value;
     } else {
       if (value > 10) {
@@ -314,7 +314,7 @@ export default class VotePage extends observer(LitElement) {
           evaluatee: sub.submitter.id,
           song: sub.song.id,
           score: Number(window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-score`)),
-          ratedFamous: window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-is-famous`) === 'true',
+          ratedFamous: window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-is-famous`) === "true",
           round: store.ongoingRound.id,
         });
         sub.addEvaluation(evaluationModel.id);
@@ -325,7 +325,7 @@ export default class VotePage extends observer(LitElement) {
       const submissionsIds = this.submissions.map((sub) => sub.id);
       const evaluationsIds = evaluations.map((evaluation) => evaluation.id);
 
-      const roundRef = db.collection('groups').doc(store.currentGroup).collection('rounds')
+      const roundRef = db.collection("groups").doc(store.currentGroup).collection("rounds")
         .doc(store.ongoingRound.id)
         .withConverter(DateConverter);
 
@@ -333,7 +333,7 @@ export default class VotePage extends observer(LitElement) {
         const round = await transaction.get(roundRef);
         const roundEvaluations = round.data().evaluations || [];
         const submissions = await Promise.all(submissionsIds.map(async (id) => {
-          const subRef = db.collection('groups').doc(store.currentGroup).collection('submissions').doc(id)
+          const subRef = db.collection("groups").doc(store.currentGroup).collection("submissions").doc(id)
             .withConverter(DateConverter);
           const submission = transaction.get(subRef);
           return submission;
@@ -344,7 +344,7 @@ export default class VotePage extends observer(LitElement) {
           const subEvaluations = subData.evaluations;
           const evaluation = evaluations
             .find((subEvaluation) => subEvaluation.song === subData.song);
-          const evalRef = db.collection('groups').doc(store.currentGroup).collection('evaluations').doc(evaluation.id)
+          const evalRef = db.collection("groups").doc(store.currentGroup).collection("evaluations").doc(evaluation.id)
             .withConverter(DateConverter);
 
           await transaction
@@ -364,16 +364,16 @@ export default class VotePage extends observer(LitElement) {
           window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-score`);
           window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-is-famous`);
         });
-        this.message = 'Voto enviado com sucesso!';
-        this.onCloseMessage = () => window.history.replaceState(null, '', 'menu');
+        this.message = "Voto enviado com sucesso!";
+        this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
       }).catch(() => {
-        this.message = 'Houve um problema ao tentar enviar seu voto. Tente novamente mais tarde.';
+        this.message = "Houve um problema ao tentar enviar seu voto. Tente novamente mais tarde.";
       });
     } catch (e) {
       this.buttonDisabled = false;
-      const isScoreError = e.message.indexOf('/score') > 0;
+      const isScoreError = e.message.indexOf("/score") > 0;
       if (isScoreError) {
-        this.message = 'Você não pontuou todas as músicas com um valor válido.';
+        this.message = "Você não pontuou todas as músicas com um valor válido.";
       } else {
         this.message = e.message;
       }
@@ -436,8 +436,8 @@ export default class VotePage extends observer(LitElement) {
     return html`
       ${this.submissions.map((sub) => html`
         <label>${sub.song.title}</label>
-        <label>Nota ${window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-score`) || 'inválida'}</label>
-        <label>${window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-is-famous`) === 'true' ? 'Famosa' : ''}</label>
+        <label>Nota ${window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-score`) || "inválida"}</label>
+        <label>${window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-is-famous`) === "true" ? "Famosa" : ""}</label>
         <hr/>
       `)}
       <section class="navigation-section">
@@ -486,4 +486,4 @@ export default class VotePage extends observer(LitElement) {
   }
 }
 
-window.customElements.define('vote-page', VotePage);
+window.customElements.define("vote-page", VotePage);

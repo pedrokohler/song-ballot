@@ -1,17 +1,17 @@
 /* eslint-disable no-param-reassign */
-import { types } from 'mobx-state-tree';
+import { types } from "mobx-state-tree";
 
-import { db, DateConverter } from '../services/firebase';
-import { User } from './user';
-import { Song } from './song';
-import { Submission } from './submission';
-import { Evaluation } from './evaluation';
-import { Round } from './round';
-import { DefaultModel } from './default';
+import { db, DateConverter } from "../services/firebase";
+import { User } from "./user";
+import { Song } from "./song";
+import { Submission } from "./submission";
+import { Evaluation } from "./evaluation";
+import { Round } from "./round";
+import { DefaultModel } from "./default";
 
 export const RootStore = types
   .compose(DefaultModel)
-  .named('RootStore')
+  .named("RootStore")
   .props({
     authStateChecked: types.boolean,
     currentUser: types.maybeNull(types.reference(User)),
@@ -56,12 +56,12 @@ export const RootStore = types
     },
     getOngoingRound() {
       return new Promise((resolve, reject) => {
-        db.collection('groups')
+        db.collection("groups")
           .doc(self.currentGroup)
           .get()
           .then((groupDoc) => {
             const { ongoingRound: ongoingRoundId } = groupDoc.data();
-            db.collection('groups').doc(self.currentGroup).collection('rounds').doc(ongoingRoundId)
+            db.collection("groups").doc(self.currentGroup).collection("rounds").doc(ongoingRoundId)
               .withConverter(DateConverter)
               .get()
               .then(async (roundDoc) => {
@@ -93,8 +93,8 @@ export const RootStore = types
     },
     async loadRoundUsers([...userIds]) {
       // @todo: refactor function
-      const loadBatch = (batch) => db.collection('users')
-        .where('id', 'in', batch)
+      const loadBatch = (batch) => db.collection("users")
+        .where("id", "in", batch)
         .withConverter(DateConverter).get()
         .then((snapshot) => {
           snapshot.forEach((doc) => self.addUser(doc.data()));
@@ -114,10 +114,10 @@ export const RootStore = types
     },
     loadRoundSongs(roundId) {
       return new Promise((resolve, reject) => {
-        db.collection('groups')
+        db.collection("groups")
           .doc(self.currentGroup)
-          .collection('songs')
-          .where('round', '==', roundId)
+          .collection("songs")
+          .where("round", "==", roundId)
           .withConverter(DateConverter)
           .get()
           .then((snapshot) => {
@@ -132,10 +132,10 @@ export const RootStore = types
     },
     loadRoundSubmissions(roundId) {
       return new Promise((resolve, reject) => {
-        db.collection('groups')
+        db.collection("groups")
           .doc(self.currentGroup)
-          .collection('submissions')
-          .where('round', '==', roundId)
+          .collection("submissions")
+          .where("round", "==", roundId)
           .withConverter(DateConverter)
           .get()
           .then((snapshot) => {
@@ -150,10 +150,10 @@ export const RootStore = types
     },
     loadRoundEvaluations(roundId) {
       return new Promise((resolve, reject) => {
-        db.collection('groups')
+        db.collection("groups")
           .doc(self.currentGroup)
-          .collection('evaluations')
-          .where('round', '==', roundId)
+          .collection("evaluations")
+          .where("round", "==", roundId)
           .withConverter(DateConverter)
           .get()
           .then((snapshot) => {

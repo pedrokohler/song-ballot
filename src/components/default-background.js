@@ -1,5 +1,5 @@
-import { LitElement, html, css } from 'lit-element';
-import HorizontalLogo from '../images/horizontal-logo.png';
+import { LitElement, html, css } from "lit-element";
+import HorizontalLogo from "../images/horizontal-logo.png";
 
 export default class DefaultBackground extends LitElement {
   static get styles() {
@@ -81,7 +81,7 @@ export default class DefaultBackground extends LitElement {
     return html`
         <section class="shell">
             <header>
-                <router-link path='menu'>
+                <router-link path="menu">
                     <img class="logo" src=${HorizontalLogo} alt="song ballot"/>
                 </router-link>
             </header>
@@ -93,4 +93,4 @@ export default class DefaultBackground extends LitElement {
   }
 }
 
-window.customElements.define('default-background', DefaultBackground);
+window.customElements.define("default-background", DefaultBackground);

@@ -1,14 +1,14 @@
 /* eslint-disable import/no-cycle */
-import { types } from 'mobx-state-tree';
-import { User } from './user';
-import { Evaluation } from './evaluation';
-import { DefaultModel } from './default';
-import { Song } from './song';
-import { Round } from './round';
+import { types } from "mobx-state-tree";
+import { User } from "./user";
+import { Evaluation } from "./evaluation";
+import { DefaultModel } from "./default";
+import { Song } from "./song";
+import { Round } from "./round";
 
 export const Submission = types
   .compose(DefaultModel)
-  .named('Submission')
+  .named("Submission")
   .props({
     submitter: types.reference(User),
     song: types.reference(types.late(() => Song)),
@@ -17,13 +17,13 @@ export const Submission = types
   })
   .views((self) => ({
     get numberOfEvaluations() {
-      return self.evaluations.length;
+      return self.evaluations?.length;
     },
     get timesRatedFamous() {
-      return self.evaluations.reduce((total, ev) => (ev.ratedFamous ? total + 1 : total), 0);
+      return self.evaluations?.reduce((total, ev) => (ev.ratedFamous ? total + 1 : total), 0);
     },
     get total() {
-      return self.evaluations.reduce((total, ev) => total + ev.score, 0);
+      return self.evaluations?.reduce((total, ev) => total + ev.score, 0);
     },
     get points() {
       const penalty = self.isFamous ? 1 : 0;
@@ -31,13 +31,13 @@ export const Submission = types
       return basePoints - penalty;
     },
     get isFamous() {
-      return self.numberOfEvaluations / self.timesRatedFamous > 0.5;
+      return self.timesRatedFamous / (self.numberOfEvaluations || 1) > 0.5;
     },
   }))
   .actions((self) => ({
     addEvaluation(evaluation) {
       if (!self.evaluations.includes(evaluation)) {
-        self.evaluations.push(evaluation);
+        self.evaluations = { ...self.evaluations, evaluation };
       }
     },
   }));

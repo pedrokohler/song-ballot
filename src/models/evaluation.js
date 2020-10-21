@@ -1,14 +1,14 @@
-import { types } from 'mobx-state-tree';
-import { User } from './user';
+import { types } from "mobx-state-tree";
+import { User } from "./user";
 // eslint-disable-next-line import/no-cycle
-import { Song } from './song';
+import { Song } from "./song";
 // eslint-disable-next-line import/no-cycle
-import { Round } from './round';
-import { DefaultModel } from './default';
+import { Round } from "./round";
+import { DefaultModel } from "./default";
 
 export const Evaluation = types
   .compose(DefaultModel)
-  .named('Evaluation')
+  .named("Evaluation")
   .props({
     evaluator: types.reference(User),
     evaluatee: types.reference(User),

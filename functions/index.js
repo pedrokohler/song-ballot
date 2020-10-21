@@ -1,6 +1,6 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-const axios = require('axios');
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+const axios = require("axios");
 
 admin.initializeApp();
 
@@ -8,7 +8,7 @@ exports.initializeUser = functions.auth.user().onCreate((user) => {
   const {
     uid: id, displayName, email, photoURL
   } = user;
-  admin.firestore().collection('users').doc(id).set({
+  admin.firestore().collection("users").doc(id).set({
     id,
     displayName,
     email,
@@ -44,9 +44,9 @@ exports.controlSubmissionLimits = functions.firestore
   const { round: ongoingRound } = snapshot.data();
 
   const roundRef = admin.firestore()
-  .collection('groups')
+  .collection("groups")
   .doc(groupId)
-  .collection('rounds')
+  .collection("rounds")
   .doc(ongoingRound);
 
   const round = await roundRef.get();
@@ -55,10 +55,10 @@ exports.controlSubmissionLimits = functions.firestore
   const usersQuantity = users.length;
 
   const submissions = await admin.firestore()
-  .collection('groups')
+  .collection("groups")
   .doc(groupId)
-  .collection('submissions')
-  .where('round', '==', ongoingRound)
+  .collection("submissions")
+  .where("round", "==", ongoingRound)
   .get();
 
   const submissionsQuantity = submissions.size;
@@ -100,9 +100,9 @@ exports.controlEvaluationLimits = functions.firestore
   }
 
   const roundRef = admin.firestore()
-  .collection('groups')
+  .collection("groups")
   .doc(groupId)
-  .collection('rounds')
+  .collection("rounds")
   .doc(ongoingRound);
 
   const round = await roundRef.get();
@@ -121,10 +121,10 @@ exports.controlEvaluationLimits = functions.firestore
 
 const getRoundWinner = async (groupId, roundId) => {
   const evaluations = await admin.firestore()
-  .collection('groups')
+  .collection("groups")
   .doc(groupId)
-  .collection('evaluations')
-  .where('round', '==', roundId)
+  .collection("evaluations")
+  .where("round", "==", roundId)
   .get();
 
   const results = evaluations.docs.reduce((results, doc) => {
@@ -163,18 +163,18 @@ const getRoundWinner = async (groupId, roundId) => {
 const startNewRound = async (groupId, lastWinner) => {
   const now = admin.firestore.FieldValue.serverTimestamp();
   const groupRef = admin.firestore()
-  .collection('groups')
+  .collection("groups")
   .doc(groupId);
 
   const group = await groupRef.get();
 
   const { users } = group.data();
 
-  const round = await groupRef.collection('rounds').add({
+  const round = await groupRef.collection("rounds").add({
     submissionsStartAt: now,
-    submissionsEndAt: getDayOfNextWeekWithTime('tuesday', 15, 0, 0),
-    evaluationsStartAt: getDayOfNextWeekWithTime('tuesday', 15, 0, 1),
-    evaluationsEndAt: getDayOfNextWeekWithTime('sunday', 23, 0, 0),
+    submissionsEndAt: getDayOfNextWeekWithTime("tuesday", 15, 0, 0),
+    evaluationsStartAt: getDayOfNextWeekWithTime("tuesday", 15, 0, 1),
+    evaluationsEndAt: getDayOfNextWeekWithTime("sunday", 23, 0, 0),
     users: users || [],
     lastWinner,
     voteCount: 0
@@ -186,7 +186,7 @@ const startNewRound = async (groupId, lastWinner) => {
 }
 
 const getDayOfNextWeekWithTime = (dayName, hours, minutes, seconds) => {
-  const nextSunday = getNextDayOfWeek('sunday', false);
+  const nextSunday = getNextDayOfWeek("sunday", false);
   const nextDay = getNextDayOfWeek(dayName, true, nextSunday);
   nextDay.setHours(hours, minutes, seconds);
   return admin.firestore.Timestamp.fromDate(nextDay);

@@ -1,12 +1,12 @@
-import { types } from 'mobx-state-tree';
-import { DefaultModel } from './default';
+import { types } from "mobx-state-tree";
+import { DefaultModel } from "./default";
 // eslint-disable-next-line import/no-cycle
-import { Round } from './round';
-import { User } from './user';
+import { Round } from "./round";
+import { User } from "./user";
 
 export const Song = types
   .compose(DefaultModel)
-  .named('Song')
+  .named("Song")
   .props({
     url: types.string,
     title: types.maybeNull(types.string),

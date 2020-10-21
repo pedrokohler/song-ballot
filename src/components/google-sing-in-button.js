@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit-element';
+import { LitElement, html, css } from "lit-element";
 
 export default class GoogleSingInButton extends LitElement {
   static get styles() {
@@ -58,4 +58,4 @@ export default class GoogleSingInButton extends LitElement {
   }
 }
 
-window.customElements.define('google-sign-in-button', GoogleSingInButton);
+window.customElements.define("google-sign-in-button", GoogleSingInButton);

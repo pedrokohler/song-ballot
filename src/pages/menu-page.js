@@ -1,13 +1,13 @@
-import { LitElement, html, css } from 'lit-element';
+import { LitElement, html, css } from "lit-element";
 
 const options = [
-  { label: 'Enviar música', path: 'send-song' },
-  { label: 'Votar', path: 'vote' },
-  { label: 'Resultado', path: '' },
-  { label: 'Histórico', path: '' },
-  { label: 'Favoritas', path: '' },
-  { label: 'Perfil', path: '' },
-  { label: 'Logout', path: 'logout' },
+  { label: "Enviar música", path: "send-song" },
+  { label: "Votar", path: "vote" },
+  { label: "Resultado", path: "results" },
+  { label: "Histórico", path: "" },
+  { label: "Favoritas", path: "" },
+  { label: "Perfil", path: "" },
+  { label: "Logout", path: "logout" },
 ];
 
 export default class MenuPage extends LitElement {
@@ -75,4 +75,4 @@ export default class MenuPage extends LitElement {
   }
 }
 
-window.customElements.define('menu-page', MenuPage);
+window.customElements.define("menu-page", MenuPage);

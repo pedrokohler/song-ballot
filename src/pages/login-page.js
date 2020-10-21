@@ -1,15 +1,15 @@
-import { LitElement, html, css } from 'lit-element';
-import { observer } from 'mobx-lit-element';
-import '@polymer/paper-progress/paper-progress';
+import { LitElement, html, css } from "lit-element";
+import { observer } from "mobx-lit-element";
+import "@polymer/paper-progress/paper-progress";
 
-import { store } from '../store';
-import { handleGoogleSignIn } from '../services/firebase';
-import '../components/google-sing-in-button';
-import '../components/alert-modal';
+import { store } from "../store";
+import { handleGoogleSignIn } from "../services/firebase";
+import "../components/google-sing-in-button";
+import "../components/alert-modal";
 
 // eslint-disable-next-line no-unused-vars
-import Background from '../images/background.jpg'; // so that webpack loads the image
-import VerticalLogo from '../images/vertical-logo.png';
+import Background from "../images/background.jpg"; // so that webpack loads the image
+import VerticalLogo from "../images/vertical-logo.png";
 
 export default class LoginPage extends observer(LitElement) {
   static get styles() {
@@ -57,7 +57,7 @@ export default class LoginPage extends observer(LitElement) {
 
   render() {
     const urlParams = new URLSearchParams(window.location.search);
-    const redirectTo = urlParams.get('redirectTo');
+    const redirectTo = urlParams.get("redirectTo");
 
     if (!store.authStateChecked) {
       return html`
@@ -84,15 +84,15 @@ export default class LoginPage extends observer(LitElement) {
       return html`
       <alert-modal
         isOpen
-        .onClose=${() => window.history.pushState(null, '', 'logout')}
+        .onClose=${() => window.history.pushState(null, "", "logout")}
       >
         Você precisa ser incluído em um grupo. Solicite a sua inclusão antes de prosseguir.
       </alert-modal>`;
     }
 
-    window.history.pushState(null, '', redirectTo || 'menu');
-    return '';
+    window.history.pushState(null, "", redirectTo || "menu");
+    return "";
   }
 }
 
-window.customElements.define('login-page', LoginPage);
+window.customElements.define("login-page", LoginPage);

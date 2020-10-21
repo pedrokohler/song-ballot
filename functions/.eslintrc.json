@@ -83,6 +83,11 @@
     //Enforces the use of catch() on un-returned promises
     "promise/catch-or-return": 2,
     // Warn against nested then() or catch() statements
-    "promise/no-nesting": 1
+    "promise/no-nesting": 1,
+    "quotes": [
+      2,
+      "double",
+      "avoid-escape"
+    ]
   }
 }

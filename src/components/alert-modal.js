@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit-element';
+import { LitElement, html, css } from "lit-element";
 
 export default class AlertModal extends LitElement {
   static get styles() {
@@ -76,7 +76,7 @@ export default class AlertModal extends LitElement {
 
   render() {
     return html`
-            <section class="shell" .style="${this.isOpen ? '' : 'display: none'}">
+            <section class="shell" .style="${this.isOpen ? "" : "display: none"}">
                 <section class="backdrop"></section>
                 <section class="modal">
                     <p><slot></slot></p>
@@ -87,4 +87,4 @@ export default class AlertModal extends LitElement {
   }
 }
 
-customElements.define('alert-modal', AlertModal);
+customElements.define("alert-modal", AlertModal);

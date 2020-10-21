@@ -1,9 +1,9 @@
 /* eslint-disable import/no-cycle */
-import { types } from 'mobx-state-tree';
-import { User } from './user';
-import { Song } from './song';
-import { Submission } from './submission';
-import { Evaluation } from './evaluation';
+import { types } from "mobx-state-tree";
+import { User } from "./user";
+import { Song } from "./song";
+import { Submission } from "./submission";
+import { Evaluation } from "./evaluation";
 
 export const Round = types.model({
   id: types.identifier,

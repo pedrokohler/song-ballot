@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit-element';
+import { LitElement, html, css } from "lit-element";
 
 export default class InputModal extends LitElement {
   static get styles() {
@@ -83,7 +83,7 @@ export default class InputModal extends LitElement {
 
   render() {
     return html`
-            <section class="shell" .style="${this.isOpen ? '' : 'display: none'}">
+            <section class="shell" .style="${this.isOpen ? "" : "display: none"}">
                 <section class="backdrop"></section>
                 <section class="modal">
                     <p><slot></slot></p>
@@ -95,4 +95,4 @@ export default class InputModal extends LitElement {
   }
 }
 
-customElements.define('input-modal', InputModal);
+customElements.define("input-modal", InputModal);

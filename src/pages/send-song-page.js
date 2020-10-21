@@ -1,14 +1,14 @@
-import { LitElement, html, css } from 'lit-element';
-import { observer } from 'mobx-lit-element';
-import { getSnapshot } from 'mobx-state-tree';
-import '@polymer/paper-progress/paper-progress';
+import { LitElement, html, css } from "lit-element";
+import { observer } from "mobx-lit-element";
+import { getSnapshot } from "mobx-state-tree";
+import "@polymer/paper-progress/paper-progress";
 
-import '../components/default-background';
-import '../components/alert-modal';
-import '../components/input-modal';
-import firebase from 'firebase';
-import { db, DateConverter } from '../services/firebase';
-import { store } from '../store';
+import "../components/default-background";
+import "../components/alert-modal";
+import "../components/input-modal";
+import firebase from "firebase";
+import { db, DateConverter } from "../services/firebase";
+import { store } from "../store";
 
 export default class SendSongPage extends observer(LitElement) {
   static get styles() {
@@ -109,7 +109,7 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   getYoutubeVideoTitle(videoId) {
-    const getYoutubeTitle = firebase.functions().httpsCallable('getYoutubeTitle');
+    const getYoutubeTitle = firebase.functions().httpsCallable("getYoutubeTitle");
     return new Promise((resolve, reject) => {
       getYoutubeTitle({ videoId })
         .then((response) => resolve(response.data))
@@ -124,11 +124,11 @@ export default class SendSongPage extends observer(LitElement) {
 
   async handleConfirmationClick() {
     this.buttonDisabled = true;
-    const userInput = this.shadowRoot.querySelector('input[type=url]').value;
+    const userInput = this.shadowRoot.querySelector("input[type=url]").value;
     const videoId = this.getYoutubeVideoId(userInput);
     if (videoId) {
       try {
-        let title = '';
+        let title = "";
         if (this.titleError) {
           title = this.inputTitle;
         } else {
@@ -141,18 +141,18 @@ export default class SendSongPage extends observer(LitElement) {
         this.showVideoTitleModal = true;
       }
     } else {
-      this.error = 'O URL que você inseriu não é valido.';
+      this.error = "O URL que você inseriu não é valido.";
     }
     this.buttonDisabled = false;
   }
 
   handleSendVideoClick() {
     this.buttonDisabled = true;
-    db.collection('groups').doc(store.currentGroup).collection('songs').doc(this.videoId)
+    db.collection("groups").doc(store.currentGroup).collection("songs").doc(this.videoId)
       .get()
       .then((doc) => {
         if (doc.exists) {
-          throw new Error('A música que você enviou já foi enviada antes. Tente outra música.');
+          throw new Error("A música que você enviou já foi enviada antes. Tente outra música.");
         } else {
           const songModel = store.addSong({
             id: this.videoId,
@@ -172,13 +172,13 @@ export default class SendSongPage extends observer(LitElement) {
           });
           const submission = getSnapshot(submissionModel);
 
-          const songRef = db.collection('groups').doc(store.currentGroup).collection('songs')
+          const songRef = db.collection("groups").doc(store.currentGroup).collection("songs")
             .doc(this.videoId)
             .withConverter(DateConverter);
-          const submissionRef = db.collection('groups').doc(store.currentGroup).collection('submissions')
+          const submissionRef = db.collection("groups").doc(store.currentGroup).collection("submissions")
             .doc(submissionModel.id)
             .withConverter(DateConverter);
-          const roundRef = db.collection('groups').doc(store.currentGroup).collection('rounds')
+          const roundRef = db.collection("groups").doc(store.currentGroup).collection("rounds")
             .doc(store.ongoingRound.id)
             .withConverter(DateConverter);
 
@@ -193,10 +193,10 @@ export default class SendSongPage extends observer(LitElement) {
             await transaction.update(roundRef, { songs: newSongs, submissions: newSubmissions });
           }).then(() => {
             this.songsSent += 1;
-            this.shadowRoot.querySelector('#successModal').setAttribute('isOpen', '');
+            this.shadowRoot.querySelector("#successModal").setAttribute("isOpen", "");
           }).catch(() => {
             this.buttonDisabled = false;
-            this.error = 'Houve um problema ao tentar enviar a sua música. Tente novamente mais tarde.';
+            this.error = "Houve um problema ao tentar enviar a sua música. Tente novamente mais tarde.";
           });
         }
       })
@@ -242,15 +242,15 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   async firstUpdated() {
-    this.onCloseError = () => { this.error = ''; };
+    this.onCloseError = () => { this.error = ""; };
     this.songLimit = 1;
     this.isLoading = true;
     this.buttonDisabled = false;
-    this.inputTitle = '';
+    this.inputTitle = "";
 
-    this.startDate = '';
-    this.endTime = '';
-    this.endWeekday = '';
+    this.startDate = "";
+    this.endTime = "";
+    this.endWeekday = "";
 
     try {
       if (!store.ongoingRound) {
@@ -260,12 +260,12 @@ export default class SendSongPage extends observer(LitElement) {
       const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
 
       this.startDate = submissionsStartAt.toLocaleDateString();
-      this.endTime = submissionsEndAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-      this.endWeekday = submissionsEndAt.toLocaleString(undefined, { weekday: 'long' });
+      this.endTime = submissionsEndAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+      this.endWeekday = submissionsEndAt.toLocaleString(undefined, { weekday: "long" });
 
       if (Date.now() > submissionsEndAt) {
         this.error = `O período para enviar músicas acabou ${this.endWeekday} ${this.endTime}.`;
-        this.onCloseError = () => window.history.replaceState(null, '', 'menu');
+        this.onCloseError = () => window.history.replaceState(null, "", "menu");
         this.isLoading = false;
         return;
       }
@@ -282,11 +282,11 @@ export default class SendSongPage extends observer(LitElement) {
       this.songsSent = userSubmissions.length;
 
       if (this.songsSent >= this.songLimit) {
-        this.error = 'Você já enviou o número máximo de músicas para esta rodada';
-        this.onCloseError = () => window.history.replaceState(null, '', 'menu');
+        this.error = "Você já enviou o número máximo de músicas para esta rodada";
+        this.onCloseError = () => window.history.replaceState(null, "", "menu");
       }
     } catch (e) {
-      this.onCloseError = () => window.history.replaceState(null, '', 'menu');
+      this.onCloseError = () => window.history.replaceState(null, "", "menu");
       this.error = e.message;
     }
 
@@ -312,8 +312,8 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   handleInputModalClose() {
-    const inputModal = this.shadowRoot.querySelector('input-modal');
-    const input = inputModal.shadowRoot.querySelector('input');
+    const inputModal = this.shadowRoot.querySelector("input-modal");
+    const input = inputModal.shadowRoot.querySelector("input");
     if (input.value) {
       this.inputTitle = input.value;
       this.showVideoTitleModal = false;
@@ -337,9 +337,9 @@ export default class SendSongPage extends observer(LitElement) {
         </input-modal>
         <alert-modal
             id="successModal"
-            .onClose=${() => window.history.pushState(null, '', 'menu')}
+            .onClose=${() => window.history.pushState(null, "", "menu")}
         >
-            Música enviada com sucesso! ${this.songsSent < this.songLimit ? 'Você ainda pode enviar mais uma música!' : ''}
+            Música enviada com sucesso! ${this.songsSent < this.songLimit ? "Você ainda pode enviar mais uma música!" : ""}
         </alert-modal>
         <alert-modal
             .isOpen=${!!this.error}
@@ -370,4 +370,4 @@ export default class SendSongPage extends observer(LitElement) {
   }
 }
 
-window.customElements.define('send-song-page', SendSongPage);
+window.customElements.define("send-song-page", SendSongPage);
