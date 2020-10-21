@@ -133,9 +133,6 @@ export default class ResultsPage extends observer(LitElement) {
       error: {
         type: String,
       },
-      onCloseError: {
-        type: Function,
-      },
       isLoading: {
         type: Boolean,
       },
@@ -201,7 +198,7 @@ export default class ResultsPage extends observer(LitElement) {
     return html`
         <alert-modal
             .isOpen=${!!this.error}
-            .onClose=${this.onCloseError}
+            @button-clicked="${this.onCloseError}"
         >
             ${this.error}
         </alert-modal>

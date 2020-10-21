@@ -70,15 +70,26 @@ export default class InputModal extends LitElement {
     return {
       isOpen: {
         type: Boolean,
-        reflect: true,
       },
       inputText: {
         type: String,
       },
-      onClose: {
-        type: Function,
-      },
     };
+  }
+
+  handleClick() {
+    this.buttonClickedEvent = new CustomEvent("button-clicked", {
+      detail: {
+        inputText: this.inputText,
+      },
+      bubbles: true,
+      composed: true,
+    });
+    this.dispatchEvent(this.buttonClickedEvent);
+  }
+
+  handleTextInput(e) {
+    this.inputText = e.target.value;
   }
 
   render() {
@@ -87,8 +98,8 @@ export default class InputModal extends LitElement {
                 <section class="backdrop"></section>
                 <section class="modal">
                     <p><slot></slot></p>
-                    <input type="text" value="${this.inputText}"/>
-                    <button @click="${this.onClose}">ok</button>
+                    <input type="text" @input="${this.handleTextInput}"/>
+                    <button @click="${this.handleClick}">ok</button>
                 </section>
             </section>
         `;

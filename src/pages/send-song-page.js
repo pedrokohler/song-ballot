@@ -220,9 +220,6 @@ export default class SendSongPage extends observer(LitElement) {
       error: {
         type: String,
       },
-      onCloseError: {
-        type: Function,
-      },
       isLoading: {
         type: Boolean,
       },
@@ -311,11 +308,10 @@ export default class SendSongPage extends observer(LitElement) {
     `;
   }
 
-  handleInputModalClose() {
-    const inputModal = this.shadowRoot.querySelector("input-modal");
-    const input = inputModal.shadowRoot.querySelector("input");
-    if (input.value) {
-      this.inputTitle = input.value;
+  handleInputModalClose(e) {
+    const { inputText } = e?.detail;
+    if (inputText) {
+      this.inputTitle = inputText;
       this.showVideoTitleModal = false;
     }
   }
@@ -331,19 +327,19 @@ export default class SendSongPage extends observer(LitElement) {
         <input-modal
           inputText=""
           .isOpen=${this.showVideoTitleModal}
-          .onClose=${this.handleInputModalClose.bind(this)}
+          @button-clicked="${this.handleInputModalClose}"
         >
          Houve um problema ao carregar o título do vídeo. Digite o título manualmente e carregue o vídeo mais uma vez.
         </input-modal>
         <alert-modal
             id="successModal"
-            .onClose=${() => window.history.pushState(null, "", "menu")}
+            @button-clicked="${() => window.history.pushState(null, "", "menu")}"
         >
             Música enviada com sucesso! ${this.songsSent < this.songLimit ? "Você ainda pode enviar mais uma música!" : ""}
         </alert-modal>
         <alert-modal
             .isOpen=${!!this.error}
-            .onClose=${this.onCloseError}
+            @button-clicked="${this.onCloseError}"
         >
             ${this.error}
         </alert-modal>

@@ -157,9 +157,6 @@ export default class VotePage extends observer(LitElement) {
       submissionIndex: {
         type: Number,
       },
-      onCloseMessage: {
-        type: Function,
-      },
       message: {
         type: String,
       },
@@ -469,7 +466,7 @@ export default class VotePage extends observer(LitElement) {
     return html`
         <alert-modal
             .isOpen=${!!this.message}
-            .onClose=${this.onCloseMessage}
+            @button-clicked="${this.onCloseMessage}"
         >
             ${this.message}
         </alert-modal>

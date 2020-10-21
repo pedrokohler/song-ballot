@@ -66,12 +66,15 @@ export default class AlertModal extends LitElement {
     return {
       isOpen: {
         type: Boolean,
-        reflect: true,
-      },
-      onClose: {
-        type: Function,
       },
     };
+  }
+
+  firstUpdated() {
+    this.buttonClickedEvent = new CustomEvent("button-clicked", {
+      bubbles: true,
+      composed: true,
+    });
   }
 
   render() {
@@ -80,7 +83,7 @@ export default class AlertModal extends LitElement {
                 <section class="backdrop"></section>
                 <section class="modal">
                     <p><slot></slot></p>
-                    <button @click="${this.onClose}">ok</button>
+                    <button @click="${() => this.dispatchEvent(this.buttonClickedEvent)}">ok</button>
                 </section>
             </section>
         `;
