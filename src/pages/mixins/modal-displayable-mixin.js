@@ -51,11 +51,11 @@ export default function ModalDisplaybleMixin({ customizedAlertCodes, customizedA
             + "Please pass an errorMessage parameter.",
           );
         }
-        const alertModalMessage = messageGenerator(errorMessage);
+        const alertModalMessage = messageGenerator.bind(this)(errorMessage);
         this.insertModalIntoShadowRoot({
           type: "alert",
           text: alertModalMessage,
-          onClose: onCloseFunction,
+          onClose: onCloseFunction.bind(this),
         });
       }
 
