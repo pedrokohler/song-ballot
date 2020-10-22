@@ -59,3 +59,12 @@ export const DateConverter = {
     return newData;
   },
 };
+
+export const fetchYoutubeVideoTitle = (videoId) => {
+  const getYoutubeTitle = firebase.functions().httpsCallable("getYoutubeTitle");
+  return new Promise((resolve, reject) => {
+    getYoutubeTitle({ videoId })
+      .then((response) => resolve(response.data))
+      .catch((e) => reject(e));
+  });
+};

@@ -234,7 +234,7 @@ export default class ResultsPage extends observer(LitElement) {
                 </table>
                 <section class="navigation-section">
                     <button
-                        .disabled=${this.submissionIndex <= 0}
+                        ?disabled=${this.submissionIndex <= 0}
                         class="navigation-btn"
                         @click=${() => { this.submissionIndex -= 1; }}
                     >
@@ -242,7 +242,7 @@ export default class ResultsPage extends observer(LitElement) {
                         <span>anterior</span>
                     </button>
                     <button
-                        .disabled=${this.submissionIndex >= this.submissions?.length - 1}
+                        ?disabled=${this.submissionIndex >= this.submissions?.length - 1}
                         class="navigation-btn"
                         @click=${() => { this.submissionIndex += 1; }}
                     >

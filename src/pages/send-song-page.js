@@ -6,8 +6,7 @@ import "@polymer/paper-progress/paper-progress";
 import "../components/default-background";
 import "../components/alert-modal";
 import "../components/input-modal";
-import firebase from "firebase";
-import { db, DateConverter } from "../services/firebase";
+import { db, DateConverter, fetchYoutubeVideoTitle } from "../services/firebase";
 import { store } from "../store";
 
 export default class SendSongPage extends observer(LitElement) {
@@ -108,104 +107,6 @@ export default class SendSongPage extends observer(LitElement) {
     `;
   }
 
-  getYoutubeVideoTitle(videoId) {
-    const getYoutubeTitle = firebase.functions().httpsCallable("getYoutubeTitle");
-    return new Promise((resolve, reject) => {
-      getYoutubeTitle({ videoId })
-        .then((response) => resolve(response.data))
-        .catch((e) => reject(e.message));
-    });
-  }
-
-  getYoutubeVideoId(url) {
-    const match = url.match(/.*\.be\/([^&]*).*$/) || url.match(/.*\.com\/watch\?v=([^&]*).*$/);
-    return (match && match[1]) || null;
-  }
-
-  async handleConfirmationClick() {
-    this.buttonDisabled = true;
-    const userInput = this.shadowRoot.querySelector("input[type=url]").value;
-    const videoId = this.getYoutubeVideoId(userInput);
-    if (videoId) {
-      try {
-        let title = "";
-        if (this.titleError) {
-          title = this.inputTitle;
-        } else {
-          title = await this.getYoutubeVideoTitle(videoId);
-        }
-        this.videoTitle = title;
-        this.videoId = videoId;
-      } catch (e) {
-        this.titleError = true;
-        this.showVideoTitleModal = true;
-      }
-    } else {
-      this.error = "O URL que você inseriu não é valido.";
-    }
-    this.buttonDisabled = false;
-  }
-
-  handleSendVideoClick() {
-    this.buttonDisabled = true;
-    db.collection("groups").doc(store.currentGroup).collection("songs").doc(this.videoId)
-      .get()
-      .then((doc) => {
-        if (doc.exists) {
-          throw new Error("A música que você enviou já foi enviada antes. Tente outra música.");
-        } else {
-          const songModel = store.addSong({
-            id: this.videoId,
-            url: this.getURL(),
-            title: this.videoTitle,
-            round: store.ongoingRound.id,
-            user: store.currentUser.id,
-          });
-          const song = getSnapshot(songModel);
-
-          const submissionModel = store.addSubmission({
-            id: store.generateId(),
-            submitter: store.currentUser.id,
-            song: this.videoId,
-            evaluations: [],
-            round: store.ongoingRound.id,
-          });
-          const submission = getSnapshot(submissionModel);
-
-          const songRef = db.collection("groups").doc(store.currentGroup).collection("songs")
-            .doc(this.videoId)
-            .withConverter(DateConverter);
-          const submissionRef = db.collection("groups").doc(store.currentGroup).collection("submissions")
-            .doc(submissionModel.id)
-            .withConverter(DateConverter);
-          const roundRef = db.collection("groups").doc(store.currentGroup).collection("rounds")
-            .doc(store.ongoingRound.id)
-            .withConverter(DateConverter);
-
-          db.runTransaction(async (transaction) => {
-            const round = await transaction.get(roundRef);
-            const oldSongs = round.data().songs || [];
-            const oldSubmissions = round.data().submissions || [];
-            const newSongs = [...oldSongs, this.videoId];
-            const newSubmissions = [...oldSubmissions, submission.id];
-            await transaction.set(songRef, song);
-            await transaction.set(submissionRef, submission);
-            await transaction.update(roundRef, { songs: newSongs, submissions: newSubmissions });
-          }).then(() => {
-            this.songsSent += 1;
-            this.shadowRoot.querySelector("#successModal").setAttribute("isOpen", "");
-          }).catch(() => {
-            this.buttonDisabled = false;
-            this.error = "Houve um problema ao tentar enviar a sua música. Tente novamente mais tarde.";
-          });
-        }
-      })
-      .catch((e) => {
-        this.buttonDisabled = false;
-        this.error = e.message;
-      });
-  }
-
   static get properties() {
     return {
       videoId: {
@@ -217,13 +118,13 @@ export default class SendSongPage extends observer(LitElement) {
       videoTitle: {
         type: String,
       },
-      error: {
+      alertModalMessage: {
         type: String,
       },
       isLoading: {
         type: Boolean,
       },
-      showVideoTitleModal: {
+      isInputModalOpen: {
         type: Boolean,
       },
       inputTitle: {
@@ -238,82 +139,16 @@ export default class SendSongPage extends observer(LitElement) {
     };
   }
 
-  async firstUpdated() {
-    this.onCloseError = () => { this.error = ""; };
-    this.songLimit = 1;
+  constructor() {
+    super();
+    this.songLimit = 0;
     this.isLoading = true;
     this.buttonDisabled = false;
     this.inputTitle = "";
-
-    this.startDate = "";
-    this.endTime = "";
-    this.endWeekday = "";
-
-    try {
-      if (!store.ongoingRound) {
-        await store.getOngoingRound();
-      }
-
-      const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
-
-      this.startDate = submissionsStartAt.toLocaleDateString();
-      this.endTime = submissionsEndAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-      this.endWeekday = submissionsEndAt.toLocaleString(undefined, { weekday: "long" });
-
-      if (Date.now() > submissionsEndAt) {
-        this.error = `O período para enviar músicas acabou ${this.endWeekday} ${this.endTime}.`;
-        this.onCloseError = () => window.history.replaceState(null, "", "menu");
-        this.isLoading = false;
-        return;
-      }
-
-      if (store.ongoingRound.lastWinner
-        && store.ongoingRound.lastWinner.id === store.currentUser.id) {
-        this.isLastWinner = true;
-        this.songLimit += 1;
-      }
-
-      const userSubmissions = Array.from(store.submissions.values())
-        .filter((submission) => submission.submitter.id === store.currentUser.id);
-
-      this.songsSent = userSubmissions.length;
-
-      if (this.songsSent >= this.songLimit) {
-        this.error = "Você já enviou o número máximo de músicas para esta rodada";
-        this.onCloseError = () => window.history.replaceState(null, "", "menu");
-      }
-    } catch (e) {
-      this.onCloseError = () => window.history.replaceState(null, "", "menu");
-      this.error = e.message;
-    }
-
-    this.isLoading = false;
-  }
-
-  getURL() {
-    return `https://www.youtube.com/embed/${this.videoId}`;
-  }
-
-  videoTemplate() {
-    return html`
-        <hr/>
-        <h4>${this.videoTitle}</h4>
-        <iframe src=${this.getURL()} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        <button
-            @click=${this.handleSendVideoClick}
-            .disabled=${this.buttonDisabled}
-        >
-        Enviar
-        </button>
-    `;
-  }
-
-  handleInputModalClose(e) {
-    const { inputText } = e?.detail;
-    if (inputText) {
-      this.inputTitle = inputText;
-      this.showVideoTitleModal = false;
-    }
+    this.startDateString = "";
+    this.endTimeString = "";
+    this.endWeekdayString = "";
+    this.maybePendingRejects = [];
   }
 
   render() {
@@ -324,45 +159,384 @@ export default class SendSongPage extends observer(LitElement) {
     }
 
     return html`
-        <input-modal
-          inputText=""
-          .isOpen=${this.showVideoTitleModal}
-          @button-clicked="${this.handleInputModalClose}"
-        >
-         Houve um problema ao carregar o título do vídeo. Digite o título manualmente e carregue o vídeo mais uma vez.
-        </input-modal>
-        <alert-modal
-            id="successModal"
-            @button-clicked="${() => window.history.pushState(null, "", "menu")}"
-        >
-            Música enviada com sucesso! ${this.songsSent < this.songLimit ? "Você ainda pode enviar mais uma música!" : ""}
-        </alert-modal>
-        <alert-modal
-            .isOpen=${!!this.error}
-            @button-clicked="${this.onCloseError}"
-        >
-            ${this.error}
-        </alert-modal>
+        ${this.modalsTemplate()}
         <default-background>
             <section>
                 <h3>Enviar música</h3>
-                <h4>Semana ${this.startDate}</h4>
-                <p>O limite para envio da música é até ${this.endTime} de ${this.endWeekday}</p>
+                <h4>Semana ${this.startDateString}</h4>
+                <p>O limite para envio da música é até ${this.endTimeString} de ${this.endWeekdayString}</p>
                 <hr/>
                 <div>
                     <h4>Carregar música</h4>
                     <h6>Insira o link do vídeo do Youtube</h6>
                 </div>
                 <input type="url"/>
-                <!-- @todo implement real callback -->
                 <button
                   @click="${this.handleConfirmationClick}"
-                  .disabled=${this.buttonDisabled}
+                  ?disabled=${this.buttonDisabled}
                 >Carregar</button>
                 ${this.videoId && this.videoTemplate()}
             </section>
         </default-background>
     `;
+  }
+
+  videoTemplate() {
+    return html`
+        <hr/>
+        <h4>${this.videoTitle}</h4>
+        <iframe src=${this.videoURL} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <button
+            @click=${this.handleSendVideoClick}
+            ?disabled=${this.buttonDisabled}
+        >
+        Enviar
+        </button>
+    `;
+  }
+
+  modalsTemplate() {
+    return html`
+      <input-modal
+        .isOpen=${this.isInputModalOpen}
+        @button-clicked="${this.handleInputModalClose}"
+      >
+        Houve um problema ao carregar o título do vídeo. Digite o título manualmente e carregue o vídeo mais uma vez.
+      </input-modal>
+      <alert-modal
+        .isOpen=${this.isAlertModalOpen}
+        @button-clicked="${this.handleAlertModalClose}"
+      >
+          ${this.alertModalMessage}
+      </alert-modal>
+    `;
+  }
+
+  async firstUpdated() {
+    try {
+      if (!store.ongoingRound) {
+        await store.getOngoingRound();
+      }
+      const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
+      this.setDateStrings(submissionsStartAt, submissionsEndAt);
+      this.checkSubmissionsEnded(submissionsEndAt);
+      this.setSongLimit();
+      this.checkSongLimit();
+    } catch (e) {
+      this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU, e.message);
+    }
+    this.isLoading = false;
+  }
+
+  setDateStrings(submissionsStartAt, submissionsEndAt) {
+    this.startDateString = submissionsStartAt.toLocaleDateString();
+    this.endTimeString = submissionsEndAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    this.endWeekdayString = submissionsEndAt.toLocaleString(undefined, { weekday: "long" });
+  }
+
+  checkSubmissionsEnded(submissionsEndAt) {
+    if (Date.now() > submissionsEndAt) {
+      this.safeOpenAlertModal(this.alertCodes.SUBMISSION_PERIOD_OVER);
+    }
+  }
+
+  setSongLimit() {
+    if (store.ongoingRound.lastWinner
+      && store.ongoingRound.lastWinner.id === store.currentUser.id) {
+      this.songLimit = 2;
+    } else {
+      this.songLimit = 1;
+    }
+  }
+
+  checkSongLimit() {
+    const userSubmissions = Array.from(store.submissions.values())
+      .filter((submission) => submission.submitter.id === store.currentUser.id);
+
+    this.songsSent = userSubmissions.length;
+
+    if (this.songsSent >= this.songLimit) {
+      this.safeOpenAlertModal(this.alertCodes.MAX_NUMBER_OF_SONGS);
+    }
+  }
+
+  async handleConfirmationClick() {
+    this.buttonDisabled = true;
+    const videoId = this.getVideoId();
+    await this.safeSetVideoTitle(videoId);
+    this.buttonDisabled = false;
+  }
+
+  getVideoId() {
+    const userInput = this.shadowRoot.querySelector("input[type=url]").value;
+    const videoId = this.parseYoutubeVideoId(userInput);
+    return videoId;
+  }
+
+  async safeSetVideoTitle(videoId) {
+    if (videoId) {
+      const title = await this.getVideoTitle(videoId);
+      this.videoTitle = title;
+      this.videoId = videoId;
+    } else {
+      this.safeOpenAlertModal(this.alertCodes.INVALID_URL);
+    }
+  }
+
+  async getVideoTitle(videoId) {
+    try {
+      const title = await fetchYoutubeVideoTitle(videoId);
+      return title;
+    } catch (e) {
+      const title = await this.getManualVideoTitle();
+      return title;
+    }
+  }
+
+  getManualVideoTitle() {
+    const handleInputModalClose = (resolve) => (e) => {
+      const { inputText } = e?.detail;
+      if (inputText) {
+        this.isInputModalOpen = false;
+        resolve(inputText);
+      }
+    };
+    return new Promise((resolve) => {
+      // no reject: can only go on if resolves title or leaves page
+      this.handleInputModalClose = handleInputModalClose(resolve);
+      this.isInputModalOpen = true;
+    });
+  }
+
+  parseYoutubeVideoId(url) {
+    const match = url.match(/.*youtu\.be\/([^&]*).*$/) // youtu.be/id
+    || url.match(/.*youtube\.com\/watch\?v=([^&]*).*$/); // youtube.com/watch?v=id
+    return (match && match[1]) || null;
+  }
+
+  async handleSendVideoClick() {
+    this.buttonDisabled = true;
+    try {
+      const isNewSong = await this.isNewSong(this.videoId);
+      if (isNewSong) {
+        await this.updateStoreAndPersistData();
+        this.safeOpenAlertModal(this.alertCodes.SUBMISSION_SUCCESS);
+      } else {
+        this.safeOpenAlertModal(this.alertCodes.DUPLICATED_SONG);
+      }
+    } catch (e) {
+      this.buttonDisabled = false;
+      this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_CLOSE_MODAL, e.message);
+    }
+  }
+
+  async updateStoreAndPersistData() {
+    const { song, submissionModel, submission } = this.updateStore();
+    await this.persistData(song, submissionModel, submission);
+    this.songsSent += 1;
+  }
+
+  updateStore() {
+    const song = this.generateSanitizedSongPayload();
+    const submissionModel = this.generateSubmissionModel();
+    const submission = this.generateSanitizedSubmissionPayload(submissionModel);
+    return { song, submissionModel, submission };
+  }
+
+  async persistData(song, submissionModel, submission) {
+    const { songRef, roundRef } = this;
+    const submissionRef = this.getSubmissionRef(submissionModel);
+
+    await db.runTransaction(this.sendSongTransaction({
+      roundRef, submissionRef, submission, songRef, song,
+    }));
+  }
+
+  async isNewSong(videoId) {
+    const song = await db.collection("groups")
+      .doc(store.currentGroup)
+      .collection("songs")
+      .doc(videoId)
+      .get();
+    return !song.exists;
+  }
+
+  generateSanitizedSongPayload() {
+    const songModel = this.generateSongModel();
+    const sanitizedSong = getSnapshot(songModel);
+    return sanitizedSong;
+  }
+
+  generateSongModel() {
+    const songModel = store.addSong({
+      id: this.videoId,
+      url: this.videoURL,
+      title: this.videoTitle,
+      round: store.ongoingRound.id,
+      user: store.currentUser.id,
+    });
+    return songModel;
+  }
+
+  generateSanitizedSubmissionPayload(submissionModel) {
+    const sanitizedSubmission = getSnapshot(submissionModel);
+    return sanitizedSubmission;
+  }
+
+  generateSubmissionModel() {
+    const submissionModel = store.addSubmission({
+      id: store.generateId(),
+      submitter: store.currentUser.id,
+      song: this.videoId,
+      evaluations: [],
+      round: store.ongoingRound.id,
+    });
+    return submissionModel;
+  }
+
+  sendSongTransaction({
+    roundRef, submissionRef, submission, songRef, song,
+  }) {
+    return async (transaction) => {
+      const round = await transaction.get(roundRef);
+      const updatedSongIds = this.getUpdatedSongIds(round, this.videoId);
+      const updatedSubmissionIds = this.getUpdatedSongIds(round, this.videoId);
+      await transaction.set(songRef, song);
+      await transaction.set(submissionRef, submission);
+      await transaction.update(
+        roundRef,
+        { songs: updatedSongIds, submissions: updatedSubmissionIds },
+      );
+    };
+  }
+
+  getUpdatedSongIds(round, newVideoId) {
+    const oldSongIds = round.data().songs || [];
+    const updatedSongIds = [...oldSongIds, newVideoId];
+    return updatedSongIds;
+  }
+
+  getUpdatedSubmissionsIds(round, submission) {
+    const oldSubmissionIds = round.data().submissions || [];
+    const updatedSubmissionIds = [...oldSubmissionIds, submission.id];
+    return updatedSubmissionIds;
+  }
+
+  get roundRef() {
+    return this.groupRef.collection("rounds")
+      .doc(store.ongoingRound.id)
+      .withConverter(DateConverter);
+  }
+
+  getSubmissionRef(submissionModel) {
+    return this.groupRef.collection("submissions")
+      .doc(submissionModel.id)
+      .withConverter(DateConverter);
+  }
+
+  get songRef() {
+    return this.groupRef
+      .collection("songs")
+      .doc(this.videoId)
+      .withConverter(DateConverter);
+  }
+
+  get groupRef() {
+    return db.collection("groups").doc(store.currentGroup);
+  }
+
+  get isAlertModalOpen() {
+    return !!this.alertModalMessage;
+  }
+
+  get videoURL() {
+    return `https://www.youtube.com/embed/${this.videoId}`;
+  }
+
+  get alertCodes() {
+    return {
+      SUBMISSION_PERIOD_OVER: "submission-period-over",
+      MAX_NUMBER_OF_SONGS: "max-number-of-songs",
+      INVALID_URL: "invalid-url",
+      SUBMISSION_SUCCESS: "submission-success",
+      DUPLICATED_SONG: "duplicated-song",
+      UNEXPECTED_ERROR_GO_MENU: "unexpected-error-go-menu",
+      UNEXPECTED_ERROR_CLOSE_MODAL: "unexpected-error-close-modal",
+    };
+  }
+
+  generateAlerts() {
+    const goToMenu = () => window.history.replaceState(null, "", "menu");
+    const closeModal = () => { this.alertModalMessage = ""; };
+    return new Map([
+      [this.alertCodes.SUBMISSION_PERIOD_OVER, {
+        needsErrorMessage: false,
+        messageGenerator: () => `O período para enviar músicas acabou ${this.endWeekdayString} ${this.endTimeString}.`,
+        onCloseFunction: goToMenu,
+      }],
+      [this.alertCodes.MAX_NUMBER_OF_SONGS, {
+        needsErrorMessage: false,
+        messageGenerator: () => "Você já enviou o número máximo de músicas para esta rodada",
+        onCloseFunction: goToMenu,
+      }],
+      [this.alertCodes.INVALID_URL, {
+        needsErrorMessage: false,
+        messageGenerator: () => "O URL que você inseriu não é valido.",
+        onCloseFunction: closeModal,
+      }],
+      [this.alertCodes.SUBMISSION_SUCCESS, {
+        needsErrorMessage: false,
+        messageGenerator: () => `Música enviada com sucesso! ${this.songsSent < this.songLimit
+          ? "Você ainda pode enviar mais uma música!"
+          : ""}`,
+        onCloseFunction: goToMenu,
+      }],
+      [this.alertCodes.DUPLICATED_SONG, {
+        needsErrorMessage: false,
+        messageGenerator: () => "A música que você enviou já foi enviada antes. Tente outra música.",
+        onCloseFunction: closeModal,
+      }],
+      [this.alertCodes.UNEXPECTED_ERROR_GO_MENU, {
+        needsErrorMessage: true,
+        messageGenerator: (errorMessage) => errorMessage,
+        onCloseFunction: goToMenu,
+      }],
+      [this.alertCodes.UNEXPECTED_ERROR_CLOSE_MODAL, {
+        needsErrorMessage: true,
+        messageGenerator: (errorMessage) => errorMessage,
+        onCloseFunction: closeModal,
+      }],
+    ]);
+  }
+
+  openAlertModal(alertCode, errorMessage) {
+    const alerts = this.generateAlerts();
+    if (!alerts.has(alertCode)) {
+      throw new Error(`openAlertModal: Invalid alertCode. '${alertCode}' is not valid.`);
+    }
+
+    const { needsErrorMessage, messageGenerator, onCloseFunction } = alerts.get(alertCode);
+    if (needsErrorMessage && !errorMessage) {
+      throw new Error(
+        `openAlertModal: Can't use '${alertCode}' alert without 'errorMessage' parameter. `
+        + "Please pass an errorMessage parameter.",
+      );
+    }
+
+    this.alertModalMessage = messageGenerator(errorMessage);
+    this.onCloseAlertModal = onCloseFunction;
+  }
+
+  safeOpenAlertModal(alertCode, errorMessage = "") {
+    try {
+      this.openAlertModal(alertCode, errorMessage);
+    } catch (e) {
+      this.openAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU, e.message);
+    }
+  }
+
+  handleAlertModalClose() {
+    this.onCloseAlertModal();
   }
 }
 

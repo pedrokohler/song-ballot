@@ -61,7 +61,15 @@ export default class InputModal extends LitElement {
             }
 
             input {
-              margin-bottom: 1em;
+                height: 1.5em;
+                width: calc(100% - 4px);
+                border-radius: 3px;
+                margin-bottom: 1em;
+                font-family: inherit;
+                border-style: solid;
+                border-width: 1px;
+                font-size: 1em;
+                background-color: #F2F2F2;
             }
         `;
   }

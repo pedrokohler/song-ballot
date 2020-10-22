@@ -402,7 +402,7 @@ export default class VotePage extends observer(LitElement) {
         </label>
         <section class="navigation-section">
             <button
-                .disabled=${this.submissionIndex <= 0}
+                ?disabled=${this.submissionIndex <= 0}
                 class="navigation-btn"
                 @click=${() => { this.submissionIndex -= 1; }}
             >
@@ -448,7 +448,7 @@ export default class VotePage extends observer(LitElement) {
           <button
               class="navigation-btn"
               @click=${this.handleEvaluation.bind(this)}
-              .disabled=${this.buttonDisabled}
+              ?disabled=${this.buttonDisabled}
           >
               <span>confirmar</span>
           </button>
