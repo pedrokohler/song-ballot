@@ -33,7 +33,9 @@ export default class InputModal extends LitElement {
                 transform: translate(-50%, -50%);
                 max-width: 300px;
                 width: 70%;
-                height: 200px;
+                min-height: 200px;
+                max-height: 80vh;
+                overflow: auto;
                 background-color: #FBFBD3;
                 z-index: 1001;
                 display: flex;
@@ -74,26 +76,15 @@ export default class InputModal extends LitElement {
         `;
   }
 
-  static get properties() {
-    return {
-      isOpen: {
-        type: Boolean,
-      },
-      inputText: {
-        type: String,
-      },
-    };
-  }
-
   handleClick() {
-    this.buttonClickedEvent = new CustomEvent("button-clicked", {
+    const buttonClickedEvent = new CustomEvent("button-clicked", {
       detail: {
         inputText: this.inputText,
       },
       bubbles: true,
       composed: true,
     });
-    this.dispatchEvent(this.buttonClickedEvent);
+    this.dispatchEvent(buttonClickedEvent);
   }
 
   handleTextInput(e) {
@@ -102,7 +93,7 @@ export default class InputModal extends LitElement {
 
   render() {
     return html`
-            <section class="shell" .style="${this.isOpen ? "" : "display: none"}">
+            <section class="shell" >
                 <section class="backdrop"></section>
                 <section class="modal">
                     <p><slot></slot></p>

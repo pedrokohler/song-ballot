@@ -118,17 +118,8 @@ export default class SendSongPage extends observer(LitElement) {
       videoTitle: {
         type: String,
       },
-      alertModalMessage: {
-        type: String,
-      },
       isLoading: {
         type: Boolean,
-      },
-      isInputModalOpen: {
-        type: Boolean,
-      },
-      inputTitle: {
-        type: String,
       },
       songsSent: {
         type: Number,
@@ -143,12 +134,10 @@ export default class SendSongPage extends observer(LitElement) {
     super();
     this.songLimit = 0;
     this.isLoading = true;
-    this.buttonDisabled = false;
-    this.inputTitle = "";
+    this.hasOngoingRequest = false;
     this.startDateString = "";
     this.endTimeString = "";
     this.endWeekdayString = "";
-    this.maybePendingRejects = [];
   }
 
   render() {
@@ -159,7 +148,6 @@ export default class SendSongPage extends observer(LitElement) {
     }
 
     return html`
-        ${this.modalsTemplate()}
         <default-background>
             <section>
                 <h3>Enviar música</h3>
@@ -173,9 +161,9 @@ export default class SendSongPage extends observer(LitElement) {
                 <input type="url"/>
                 <button
                   @click="${this.handleConfirmationClick}"
-                  ?disabled=${this.buttonDisabled}
+                  ?disabled=${this.hasOngoingRequest}
                 >Carregar</button>
-                ${this.videoId && this.videoTemplate()}
+                ${this.videoId ? this.videoTemplate() : ""}
             </section>
         </default-background>
     `;
@@ -188,27 +176,10 @@ export default class SendSongPage extends observer(LitElement) {
         <iframe src=${this.videoURL} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         <button
             @click=${this.handleSendVideoClick}
-            ?disabled=${this.buttonDisabled}
+            ?disabled=${this.hasOngoingRequest}
         >
         Enviar
         </button>
-    `;
-  }
-
-  modalsTemplate() {
-    return html`
-      <input-modal
-        .isOpen=${this.isInputModalOpen}
-        @button-clicked="${this.handleInputModalClose}"
-      >
-        Houve um problema ao carregar o título do vídeo. Digite o título manualmente e carregue o vídeo mais uma vez.
-      </input-modal>
-      <alert-modal
-        .isOpen=${this.isAlertModalOpen}
-        @button-clicked="${this.handleAlertModalClose}"
-      >
-          ${this.alertModalMessage}
-      </alert-modal>
     `;
   }
 
@@ -241,8 +212,7 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   setSongLimit() {
-    if (store.ongoingRound.lastWinner
-      && store.ongoingRound.lastWinner.id === store.currentUser.id) {
+    if (store.ongoingRound.lastWinner?.id === store.currentUser.id) {
       this.songLimit = 2;
     } else {
       this.songLimit = 1;
@@ -250,7 +220,8 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   checkSongLimit() {
-    const userSubmissions = Array.from(store.submissions.values())
+    const userSubmissions = Array
+      .from(store.submissions.values())
       .filter((submission) => submission.submitter.id === store.currentUser.id);
 
     this.songsSent = userSubmissions.length;
@@ -261,10 +232,10 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   async handleConfirmationClick() {
-    this.buttonDisabled = true;
+    this.hasOngoingRequest = true;
     const videoId = this.getVideoId();
     await this.safeSetVideoTitle(videoId);
-    this.buttonDisabled = false;
+    this.hasOngoingRequest = false;
   }
 
   getVideoId() {
@@ -297,15 +268,46 @@ export default class SendSongPage extends observer(LitElement) {
     const handleInputModalClose = (resolve) => (e) => {
       const { inputText } = e?.detail;
       if (inputText) {
-        this.isInputModalOpen = false;
         resolve(inputText);
+        return true;
       }
+      return false;
     };
+
+    const text = "Houve um problema ao carregar o título do vídeo. "
+    + "Digite o título manualmente e carregue o vídeo mais uma vez.";
+
     return new Promise((resolve) => {
       // no reject: can only go on if resolves title or leaves page
-      this.handleInputModalClose = handleInputModalClose(resolve);
-      this.isInputModalOpen = true;
+      this.insertModalIntoShadowRoot({
+        type: "input",
+        text,
+        onClose: handleInputModalClose(resolve),
+      });
     });
+  }
+
+  insertModalIntoShadowRoot({ type, text, onClose }) {
+    const types = new Map([
+      ["input", "input-modal"],
+      ["alert", "alert-modal"],
+    ]);
+
+    if (types.has(type)) {
+      const node = document.createElement(types.get(type));
+      const textNode = document.createTextNode(text);
+      node.appendChild(textNode);
+      node.addEventListener("button-clicked", (e) => {
+        if (onClose(e)) {
+          node.remove();
+        }
+      });
+      this.shadowRoot.insertBefore(node, this.shadowRoot.firstChild);
+      return node;
+    }
+
+    throw new Error(`insertModalIntoShadowRoot: Invalid modal type ${type}.`
+       + "Please insert a valid modal type.");
   }
 
   parseYoutubeVideoId(url) {
@@ -315,7 +317,7 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   async handleSendVideoClick() {
-    this.buttonDisabled = true;
+    this.hasOngoingRequest = true;
     try {
       const isNewSong = await this.isNewSong(this.videoId);
       if (isNewSong) {
@@ -325,9 +327,9 @@ export default class SendSongPage extends observer(LitElement) {
         this.safeOpenAlertModal(this.alertCodes.DUPLICATED_SONG);
       }
     } catch (e) {
-      this.buttonDisabled = false;
       this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_CLOSE_MODAL, e.message);
     }
+    this.hasOngoingRequest = false;
   }
 
   async updateStoreAndPersistData() {
@@ -466,8 +468,11 @@ export default class SendSongPage extends observer(LitElement) {
   }
 
   generateAlerts() {
-    const goToMenu = () => window.history.replaceState(null, "", "menu");
-    const closeModal = () => { this.alertModalMessage = ""; };
+    const goToMenu = () => {
+      window.history.replaceState(null, "", "menu");
+      return true;
+    };
+    const closeModal = () => true;
     return new Map([
       [this.alertCodes.SUBMISSION_PERIOD_OVER, {
         needsErrorMessage: false,
@@ -522,9 +527,12 @@ export default class SendSongPage extends observer(LitElement) {
         + "Please pass an errorMessage parameter.",
       );
     }
-
-    this.alertModalMessage = messageGenerator(errorMessage);
-    this.onCloseAlertModal = onCloseFunction;
+    const alertModalMessage = messageGenerator(errorMessage);
+    this.insertModalIntoShadowRoot({
+      type: "alert",
+      text: alertModalMessage,
+      onClose: onCloseFunction,
+    });
   }
 
   safeOpenAlertModal(alertCode, errorMessage = "") {
@@ -533,10 +541,6 @@ export default class SendSongPage extends observer(LitElement) {
     } catch (e) {
       this.openAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU, e.message);
     }
-  }
-
-  handleAlertModalClose() {
-    this.onCloseAlertModal();
   }
 }
 
