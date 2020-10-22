@@ -8,8 +8,50 @@ import "../components/alert-modal";
 import "../components/input-modal";
 import { db, DateConverter, fetchYoutubeVideoTitle } from "../services/firebase";
 import { store } from "../store";
+import ModalDisplayableMixin, { goToMenu, closeModal } from "./mixins/modal-displayable-mixin";
 
-export default class SendSongPage extends observer(LitElement) {
+const customizedAlertCodes = {
+  SUBMISSION_PERIOD_OVER: "submission-period-over",
+  MAX_NUMBER_OF_SONGS: "max-number-of-songs",
+  INVALID_URL: "invalid-url",
+  SUBMISSION_SUCCESS: "submission-success",
+  DUPLICATED_SONG: "duplicated-song",
+};
+
+const CustomizedDisplayableMixin = ModalDisplayableMixin({
+  customizedAlertCodes,
+  customizedAlerts: new Map([
+    [customizedAlertCodes.SUBMISSION_PERIOD_OVER, {
+      needsErrorMessage: false,
+      messageGenerator: () => `O período para enviar músicas acabou ${this.endWeekdayString} ${this.endTimeString}.`,
+      onCloseFunction: goToMenu,
+    }],
+    [customizedAlertCodes.MAX_NUMBER_OF_SONGS, {
+      needsErrorMessage: false,
+      messageGenerator: () => "Você já enviou o número máximo de músicas para esta rodada",
+      onCloseFunction: goToMenu,
+    }],
+    [customizedAlertCodes.INVALID_URL, {
+      needsErrorMessage: false,
+      messageGenerator: () => "O URL que você inseriu não é valido.",
+      onCloseFunction: closeModal,
+    }],
+    [customizedAlertCodes.SUBMISSION_SUCCESS, {
+      needsErrorMessage: false,
+      messageGenerator: () => `Música enviada com sucesso! ${this.songsSent < this.songLimit
+        ? "Você ainda pode enviar mais uma música!"
+        : ""}`,
+      onCloseFunction: goToMenu,
+    }],
+    [customizedAlertCodes.DUPLICATED_SONG, {
+      needsErrorMessage: false,
+      messageGenerator: () => "A música que você enviou já foi enviada antes. Tente outra música.",
+      onCloseFunction: closeModal,
+    }],
+  ]),
+});
+
+export default class SendSongPage extends observer(CustomizedDisplayableMixin(LitElement)) {
   static get styles() {
     return css`
         section {
@@ -112,7 +154,7 @@ export default class SendSongPage extends observer(LitElement) {
       videoId: {
         type: String,
       },
-      buttonDisabled: {
+      hasOngoingRequest: {
         type: Boolean,
       },
       videoTitle: {
@@ -287,29 +329,6 @@ export default class SendSongPage extends observer(LitElement) {
     });
   }
 
-  insertModalIntoShadowRoot({ type, text, onClose }) {
-    const types = new Map([
-      ["input", "input-modal"],
-      ["alert", "alert-modal"],
-    ]);
-
-    if (types.has(type)) {
-      const node = document.createElement(types.get(type));
-      const textNode = document.createTextNode(text);
-      node.appendChild(textNode);
-      node.addEventListener("button-clicked", (e) => {
-        if (onClose(e)) {
-          node.remove();
-        }
-      });
-      this.shadowRoot.insertBefore(node, this.shadowRoot.firstChild);
-      return node;
-    }
-
-    throw new Error(`insertModalIntoShadowRoot: Invalid modal type ${type}.`
-       + "Please insert a valid modal type.");
-  }
-
   parseYoutubeVideoId(url) {
     const match = url.match(/.*youtu\.be\/([^&]*).*$/) // youtu.be/id
     || url.match(/.*youtube\.com\/watch\?v=([^&]*).*$/); // youtube.com/watch?v=id
@@ -453,94 +472,6 @@ export default class SendSongPage extends observer(LitElement) {
 
   get videoURL() {
     return `https://www.youtube.com/embed/${this.videoId}`;
-  }
-
-  get alertCodes() {
-    return {
-      SUBMISSION_PERIOD_OVER: "submission-period-over",
-      MAX_NUMBER_OF_SONGS: "max-number-of-songs",
-      INVALID_URL: "invalid-url",
-      SUBMISSION_SUCCESS: "submission-success",
-      DUPLICATED_SONG: "duplicated-song",
-      UNEXPECTED_ERROR_GO_MENU: "unexpected-error-go-menu",
-      UNEXPECTED_ERROR_CLOSE_MODAL: "unexpected-error-close-modal",
-    };
-  }
-
-  generateAlerts() {
-    const goToMenu = () => {
-      window.history.replaceState(null, "", "menu");
-      return true;
-    };
-    const closeModal = () => true;
-    return new Map([
-      [this.alertCodes.SUBMISSION_PERIOD_OVER, {
-        needsErrorMessage: false,
-        messageGenerator: () => `O período para enviar músicas acabou ${this.endWeekdayString} ${this.endTimeString}.`,
-        onCloseFunction: goToMenu,
-      }],
-      [this.alertCodes.MAX_NUMBER_OF_SONGS, {
-        needsErrorMessage: false,
-        messageGenerator: () => "Você já enviou o número máximo de músicas para esta rodada",
-        onCloseFunction: goToMenu,
-      }],
-      [this.alertCodes.INVALID_URL, {
-        needsErrorMessage: false,
-        messageGenerator: () => "O URL que você inseriu não é valido.",
-        onCloseFunction: closeModal,
-      }],
-      [this.alertCodes.SUBMISSION_SUCCESS, {
-        needsErrorMessage: false,
-        messageGenerator: () => `Música enviada com sucesso! ${this.songsSent < this.songLimit
-          ? "Você ainda pode enviar mais uma música!"
-          : ""}`,
-        onCloseFunction: goToMenu,
-      }],
-      [this.alertCodes.DUPLICATED_SONG, {
-        needsErrorMessage: false,
-        messageGenerator: () => "A música que você enviou já foi enviada antes. Tente outra música.",
-        onCloseFunction: closeModal,
-      }],
-      [this.alertCodes.UNEXPECTED_ERROR_GO_MENU, {
-        needsErrorMessage: true,
-        messageGenerator: (errorMessage) => errorMessage,
-        onCloseFunction: goToMenu,
-      }],
-      [this.alertCodes.UNEXPECTED_ERROR_CLOSE_MODAL, {
-        needsErrorMessage: true,
-        messageGenerator: (errorMessage) => errorMessage,
-        onCloseFunction: closeModal,
-      }],
-    ]);
-  }
-
-  openAlertModal(alertCode, errorMessage) {
-    const alerts = this.generateAlerts();
-    if (!alerts.has(alertCode)) {
-      throw new Error(`openAlertModal: Invalid alertCode. '${alertCode}' is not valid.`);
-    }
-
-    const { needsErrorMessage, messageGenerator, onCloseFunction } = alerts.get(alertCode);
-    if (needsErrorMessage && !errorMessage) {
-      throw new Error(
-        `openAlertModal: Can't use '${alertCode}' alert without 'errorMessage' parameter. `
-        + "Please pass an errorMessage parameter.",
-      );
-    }
-    const alertModalMessage = messageGenerator(errorMessage);
-    this.insertModalIntoShadowRoot({
-      type: "alert",
-      text: alertModalMessage,
-      onClose: onCloseFunction,
-    });
-  }
-
-  safeOpenAlertModal(alertCode, errorMessage = "") {
-    try {
-      this.openAlertModal(alertCode, errorMessage);
-    } catch (e) {
-      this.openAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU, e.message);
-    }
   }
 }
 

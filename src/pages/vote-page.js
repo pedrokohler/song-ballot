@@ -151,7 +151,7 @@ export default class VotePage extends observer(LitElement) {
       isLoading: {
         type: Boolean,
       },
-      buttonDisabled: {
+      hasOngoingRequest: {
         type: Boolean,
       },
       submissionIndex: {
@@ -174,7 +174,7 @@ export default class VotePage extends observer(LitElement) {
 
   constructor() {
     super();
-    this.buttonDisabled = false;
+    this.hasOngoingRequest = false;
     this.isLoading = true;
     this.seeOverview = false;
     this.onCloseMessage = () => { this.message = ""; };
@@ -302,7 +302,7 @@ export default class VotePage extends observer(LitElement) {
   }
 
   async handleEvaluation() {
-    this.buttonDisabled = true;
+    this.hasOngoingRequest = true;
     try {
       const evaluations = this.submissions.map((sub) => {
         const evaluationModel = store.addEvaluation({
@@ -367,7 +367,7 @@ export default class VotePage extends observer(LitElement) {
         this.message = "Houve um problema ao tentar enviar seu voto. Tente novamente mais tarde.";
       });
     } catch (e) {
-      this.buttonDisabled = false;
+      this.hasOngoingRequest = false;
       const isScoreError = e.message.indexOf("/score") > 0;
       if (isScoreError) {
         this.message = "Você não pontuou todas as músicas com um valor válido.";
@@ -448,7 +448,7 @@ export default class VotePage extends observer(LitElement) {
           <button
               class="navigation-btn"
               @click=${this.handleEvaluation.bind(this)}
-              ?disabled=${this.buttonDisabled}
+              ?disabled=${this.hasOngoingRequest}
           >
               <span>confirmar</span>
           </button>
