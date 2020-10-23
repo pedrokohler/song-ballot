@@ -5,7 +5,16 @@ export const goToMenu = () => {
 
 export const closeModal = () => true;
 
-export default function ModalDisplaybleMixin({ customizedAlertCodes, customizedAlerts }) {
+export default function CustomizableModalDisplaybleMixin(
+  {
+    customizedAlertCodes,
+    customizedAlerts,
+  }
+  = {
+    customizedAlertCodes: [],
+    customizedAlerts: new Map(),
+  },
+) {
   return function CustomizedModalDisplaybleMixin(superClass) {
     return class ModalDisplayable extends superClass {
       constructor() {

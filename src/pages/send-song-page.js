@@ -1,5 +1,4 @@
 import { LitElement, html, css } from "lit-element";
-import { observer } from "mobx-lit-element";
 import { getSnapshot } from "mobx-state-tree";
 import "@polymer/paper-progress/paper-progress";
 
@@ -8,54 +7,12 @@ import "../components/alert-modal";
 import "../components/input-modal";
 import { db, DateConverter, fetchYoutubeVideoTitle } from "../services/firebase";
 import { store } from "../store";
-import ModalDisplayableMixin, { goToMenu, closeModal } from "./mixins/modal-displayable-mixin";
+import SendSongModalDisplayableMixin from "./mixins/modal-displayable-mixins/send-song-modal-displayable-mixin";
+import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
 
-const customizedAlertCodes = {
-  SUBMISSION_PERIOD_OVER: "submission-period-over",
-  MAX_NUMBER_OF_SONGS: "max-number-of-songs",
-  INVALID_URL: "invalid-url",
-  SUBMISSION_SUCCESS: "submission-success",
-  DUPLICATED_SONG: "duplicated-song",
-};
+const SuperClass = SendSongModalDisplayableMixin(OngoingRoundDependableMixin(LitElement));
 
-const CustomizedDisplayableMixin = ModalDisplayableMixin({
-  customizedAlertCodes,
-  customizedAlerts: new Map([
-    [customizedAlertCodes.SUBMISSION_PERIOD_OVER, {
-      needsErrorMessage: false,
-      messageGenerator() {
-        return `O período para enviar músicas acabou ${this.endWeekdayString} ${this.endTimeString}.`;
-      },
-      onCloseFunction: goToMenu,
-    }],
-    [customizedAlertCodes.MAX_NUMBER_OF_SONGS, {
-      needsErrorMessage: false,
-      messageGenerator() { return "Você já enviou o número máximo de músicas para esta rodada"; },
-      onCloseFunction: goToMenu,
-    }],
-    [customizedAlertCodes.INVALID_URL, {
-      needsErrorMessage: false,
-      messageGenerator() { return "O URL que você inseriu não é valido."; },
-      onCloseFunction: closeModal,
-    }],
-    [customizedAlertCodes.SUBMISSION_SUCCESS, {
-      needsErrorMessage: false,
-      messageGenerator() {
-        return `Música enviada com sucesso! ${this.songsSent < this.songLimit
-          ? "Você ainda pode enviar mais uma música!"
-          : ""}`;
-      },
-      onCloseFunction: goToMenu,
-    }],
-    [customizedAlertCodes.DUPLICATED_SONG, {
-      needsErrorMessage: false,
-      messageGenerator() { return "A música que você enviou já foi enviada antes. Tente outra música."; },
-      onCloseFunction: closeModal,
-    }],
-  ]),
-});
-
-export default class SendSongPage extends observer(CustomizedDisplayableMixin(LitElement)) {
+export default class SendSongPage extends SuperClass {
   static get styles() {
     return css`
         section {
@@ -229,19 +186,13 @@ export default class SendSongPage extends observer(CustomizedDisplayableMixin(Li
     `;
   }
 
-  async firstUpdated() {
-    try {
-      if (!store.ongoingRound) {
-        await store.getOngoingRound();
-      }
-      const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
-      this.setDateStrings(submissionsStartAt, submissionsEndAt);
-      this.checkSubmissionsEnded(submissionsEndAt);
-      this.setSongLimit();
-      this.checkSongLimit();
-    } catch (e) {
-      this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU, e.message);
-    }
+  async firstUpdated(changedProperties) {
+    await super.firstUpdated(changedProperties);
+    const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
+    this.setDateStrings(submissionsStartAt, submissionsEndAt);
+    this.checkSubmissionsEnded(submissionsEndAt);
+    this.setSongLimit();
+    this.checkSongLimit();
     this.isLoading = false;
   }
 
