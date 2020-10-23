@@ -3,10 +3,10 @@ import { LitElement, html, css } from "lit-element";
 const options = [
   { label: "Enviar música", path: "send-song" },
   { label: "Votar", path: "vote" },
-  { label: "Resultado", path: "results" },
-  { label: "Histórico", path: "" },
-  { label: "Favoritas", path: "" },
-  { label: "Perfil", path: "" },
+  // { label: "Resultado", path: "results" },
+  // { label: "Histórico", path: "" },
+  // { label: "Favoritas", path: "" },
+  // { label: "Perfil", path: "" },
   { label: "Logout", path: "logout" },
 ];
 
