@@ -3,8 +3,12 @@ import { store } from "../../store";
 import DefaultModalDisplayableMixin from "./modal-displayable-mixins/default-modal-displayable-mixin";
 
 export default function OngoingRoundDependableMixin(superClass) {
-  return class OngoingRoundDependable extends
-    DefaultModalDisplayableMixin(observer(superClass)) {
+  const observedSuperClass = observer(superClass);
+
+  const SuperClass = superClass.isPrototypeOfModalDisplayableMixin
+    ? observedSuperClass
+    : DefaultModalDisplayableMixin(observedSuperClass);
+  return class OngoingRoundDependable extends SuperClass {
     async firstUpdated(changedProperties) {
       super.firstUpdated(changedProperties);
       try {

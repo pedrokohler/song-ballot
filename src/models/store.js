@@ -33,10 +33,29 @@ export const RootStore = types
       self.songs.set(id, Song.create(props));
       return self.songs.get(id);
     },
+    createSongModel({ ...props }) {
+      const { videoId, videoURL, videoTitle } = props;
+      return Song.create({
+        id: videoId,
+        url: videoURL,
+        title: videoTitle,
+        round: self.ongoingRound.id,
+        user: self.currentUser.id,
+      });
+    },
     addSubmission({ ...props }) {
       const { id } = props;
       self.submissions.set(id, Submission.create(props));
       return self.submissions.get(id);
+    },
+    createSubmissionModel(videoId) {
+      return Submission.create({
+        id: self.generateId(),
+        submitter: self.currentUser.id,
+        song: videoId,
+        evaluations: [],
+        round: self.ongoingRound.id,
+      });
     },
     addRound({ ...props }) {
       const { id } = props;

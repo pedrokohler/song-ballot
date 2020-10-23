@@ -35,7 +35,7 @@ export default class AlertModal extends LitElement {
                 width: 70%;
                 min-height: 150px;
                 max-height: 80vh;
-                overflow: auto;
+                overflow-y: auto;
                 background-color: #FBFBD3;
                 z-index: 1001;
                 display: flex;

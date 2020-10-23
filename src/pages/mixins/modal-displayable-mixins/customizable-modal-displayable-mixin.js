@@ -23,6 +23,10 @@ export default function CustomizableModalDisplaybleMixin(
         this.closeModal = closeModal;
       }
 
+      static get isPrototypeOfModalDisplayableMixin() {
+        return true;
+      }
+
       get alertCodes() {
         return {
           ...customizedAlertCodes,

@@ -10,7 +10,11 @@ import { store } from "../store";
 import SendSongModalDisplayableMixin from "./mixins/modal-displayable-mixins/send-song-modal-displayable-mixin";
 import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
 
-const SuperClass = SendSongModalDisplayableMixin(OngoingRoundDependableMixin(LitElement));
+const SuperClass = SendSongModalDisplayableMixin(
+  OngoingRoundDependableMixin(
+    LitElement,
+  ),
+);
 
 export default class SendSongPage extends SuperClass {
   static get styles() {
@@ -295,7 +299,7 @@ export default class SendSongPage extends SuperClass {
     try {
       const isNewSong = await this.isNewSong(this.videoId);
       if (isNewSong) {
-        await this.updateStoreAndPersistData();
+        await this.performVideoSubmission();
         this.safeOpenAlertModal(this.alertCodes.SUBMISSION_SUCCESS);
       } else {
         this.safeOpenAlertModal(this.alertCodes.DUPLICATED_SONG);
@@ -306,68 +310,75 @@ export default class SendSongPage extends SuperClass {
     this.hasOngoingRequest = false;
   }
 
-  async updateStoreAndPersistData() {
-    const { song, submissionModel, submission } = this.updateStore();
-    await this.persistData(song, submissionModel, submission);
+  async performVideoSubmission() {
+    const { songModel, submissionModel } = this.generateVideoAndSubmissionModels({
+      videoId: this.videoId,
+      videoURL: this.videoURL,
+      videoTitle: this.videoTitle,
+    });
+
+    const sanitizedSongPayload = getSnapshot(songModel);
+    const sanitizedSubmissionPayload = getSnapshot(submissionModel);
+
+    await this.persistData(sanitizedSongPayload, sanitizedSubmissionPayload);
+
+    this.updateStore(sanitizedSongPayload, sanitizedSubmissionPayload);
     this.songsSent += 1;
   }
 
-  updateStore() {
-    const song = this.generateSanitizedSongPayload();
-    const submissionModel = this.generateSubmissionModel();
-    const submission = this.generateSanitizedSubmissionPayload(submissionModel);
-    return { song, submissionModel, submission };
+  generateVideoAndSubmissionModels({
+    videoId,
+    videoURL,
+    videoTitle,
+  }) {
+    const songModel = store.createSongModel({
+      videoId,
+      videoURL,
+      videoTitle,
+    });
+    const submissionModel = store.createSubmissionModel(videoId);
+
+    return {
+      songModel,
+      submissionModel,
+    };
   }
 
-  async persistData(song, submissionModel, submission) {
-    const { songRef, roundRef } = this;
-    const submissionRef = this.getSubmissionRef(submissionModel);
+  updateStore(song, submission) {
+    store.addSong(song);
+    store.addSubmission(submission);
+  }
+
+  async persistData(song, submission) {
+    const songRef = this.getSongRef(song.id);
+    const submissionRef = this.getSubmissionRef(submission.id);
+    const roundRef = this.getRoundRef(store.ongoingRound.id);
 
     await db.runTransaction(this.sendSongTransaction({
-      roundRef, submissionRef, submission, songRef, song,
+      roundRef,
+      submissionRef,
+      songRef,
+      submission,
+      song,
     }));
   }
 
   async isNewSong(videoId) {
+    const isSongInStore = store.songs.get(videoId);
+    if (isSongInStore) {
+      return false;
+    }
+    const isSongInDb = await this.isSongInDb(videoId);
+    return !isSongInDb;
+  }
+
+  async isSongInDb(videoId) {
     const song = await db.collection("groups")
       .doc(store.currentGroup)
       .collection("songs")
       .doc(videoId)
       .get();
-    return !song.exists;
-  }
-
-  generateSanitizedSongPayload() {
-    const songModel = this.generateSongModel();
-    const sanitizedSong = getSnapshot(songModel);
-    return sanitizedSong;
-  }
-
-  generateSongModel() {
-    const songModel = store.addSong({
-      id: this.videoId,
-      url: this.videoURL,
-      title: this.videoTitle,
-      round: store.ongoingRound.id,
-      user: store.currentUser.id,
-    });
-    return songModel;
-  }
-
-  generateSanitizedSubmissionPayload(submissionModel) {
-    const sanitizedSubmission = getSnapshot(submissionModel);
-    return sanitizedSubmission;
-  }
-
-  generateSubmissionModel() {
-    const submissionModel = store.addSubmission({
-      id: store.generateId(),
-      submitter: store.currentUser.id,
-      song: this.videoId,
-      evaluations: [],
-      round: store.ongoingRound.id,
-    });
-    return submissionModel;
+    return song.exists;
   }
 
   sendSongTransaction({
@@ -375,8 +386,8 @@ export default class SendSongPage extends SuperClass {
   }) {
     return async (transaction) => {
       const round = await transaction.get(roundRef);
-      const updatedSongIds = this.getUpdatedSongIds(round, this.videoId);
-      const updatedSubmissionIds = this.getUpdatedSongIds(round, this.videoId);
+      const updatedSongIds = this.getUpdatedSongIds(round, song.id);
+      const updatedSubmissionIds = this.getUpdatedSubmissionsIds(round, submission.id);
       await transaction.set(songRef, song);
       await transaction.set(submissionRef, submission);
       await transaction.update(
@@ -392,37 +403,33 @@ export default class SendSongPage extends SuperClass {
     return updatedSongIds;
   }
 
-  getUpdatedSubmissionsIds(round, submission) {
+  getUpdatedSubmissionsIds(round, submissionId) {
     const oldSubmissionIds = round.data().submissions || [];
-    const updatedSubmissionIds = [...oldSubmissionIds, submission.id];
+    const updatedSubmissionIds = [...oldSubmissionIds, submissionId];
     return updatedSubmissionIds;
   }
 
-  get roundRef() {
+  getRoundRef(roundId) {
     return this.groupRef.collection("rounds")
-      .doc(store.ongoingRound.id)
+      .doc(roundId)
       .withConverter(DateConverter);
   }
 
-  getSubmissionRef(submissionModel) {
+  getSubmissionRef(submissionId) {
     return this.groupRef.collection("submissions")
-      .doc(submissionModel.id)
+      .doc(submissionId)
       .withConverter(DateConverter);
   }
 
-  get songRef() {
+  getSongRef(videoId) {
     return this.groupRef
       .collection("songs")
-      .doc(this.videoId)
+      .doc(videoId)
       .withConverter(DateConverter);
   }
 
   get groupRef() {
     return db.collection("groups").doc(store.currentGroup);
-  }
-
-  get isAlertModalOpen() {
-    return !!this.alertModalMessage;
   }
 
   get videoURL() {
