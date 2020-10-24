@@ -266,7 +266,7 @@ export default class SendSongPage extends SuperClass {
   }
 
   getManualVideoTitle() {
-    const handleInputModalClose = (resolve) => (e) => {
+    const inputModalOnButtonClicked = (resolve) => (e) => {
       const { inputText } = e?.detail;
       if (inputText) {
         resolve(inputText);
@@ -283,7 +283,7 @@ export default class SendSongPage extends SuperClass {
       this.insertModalIntoShadowRoot({
         type: "input",
         text,
-        onClose: handleInputModalClose(resolve),
+        onButtonClicked: inputModalOnButtonClicked(resolve),
       });
     });
   }
@@ -308,6 +308,24 @@ export default class SendSongPage extends SuperClass {
       this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_CLOSE_MODAL, e.message);
     }
     this.hasOngoingRequest = false;
+  }
+
+  async isNewSong(videoId) {
+    const isSongInStore = store.songs.get(videoId);
+    if (isSongInStore) {
+      return false;
+    }
+    const isSongInDb = await this.isSongInDb(videoId);
+    return !isSongInDb;
+  }
+
+  async isSongInDb(videoId) {
+    const song = await db.collection("groups")
+      .doc(store.currentGroup)
+      .collection("songs")
+      .doc(videoId)
+      .get();
+    return song.exists;
   }
 
   async performVideoSubmission() {
@@ -361,24 +379,6 @@ export default class SendSongPage extends SuperClass {
       submission,
       song,
     }));
-  }
-
-  async isNewSong(videoId) {
-    const isSongInStore = store.songs.get(videoId);
-    if (isSongInStore) {
-      return false;
-    }
-    const isSongInDb = await this.isSongInDb(videoId);
-    return !isSongInDb;
-  }
-
-  async isSongInDb(videoId) {
-    const song = await db.collection("groups")
-      .doc(store.currentGroup)
-      .collection("songs")
-      .doc(videoId)
-      .get();
-    return song.exists;
   }
 
   sendSongTransaction({

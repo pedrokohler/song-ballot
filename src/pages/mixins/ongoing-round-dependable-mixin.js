@@ -17,7 +17,7 @@ export default function OngoingRoundDependableMixin(superClass) {
         }
       } catch (e) {
         this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU,
-          `An error occurred while loading the ongoing round: ${e.message}`);
+          `Ocorreu um erro ao carregar a rodada atual: ${e.message}`);
       }
     }
   };

@@ -1,5 +1,4 @@
 import { LitElement, html, css } from "lit-element";
-import { observer } from "mobx-lit-element";
 import { getSnapshot } from "mobx-state-tree";
 
 import "@polymer/paper-progress/paper-progress";
@@ -9,8 +8,15 @@ import forwardArrows from "../images/forward-arrows.png";
 import backwardArrows from "../images/backward-arrows.png";
 import { store } from "../store";
 import { db, DateConverter } from "../services/firebase";
+import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
+import VoteModalDisplayableMixin from "./mixins/modal-displayable-mixins/vote-modal-displayable-mixin";
 
-export default class VotePage extends observer(LitElement) {
+const SuperClass = VoteModalDisplayableMixin(
+  OngoingRoundDependableMixin(
+    LitElement,
+  ),
+);
+export default class VotePage extends SuperClass {
   static get styles() {
     return css`
         .shell {
@@ -157,16 +163,13 @@ export default class VotePage extends observer(LitElement) {
       submissionIndex: {
         type: Number,
       },
-      message: {
-        type: String,
-      },
       score: {
         type: Number,
       },
       isFamous: {
         type: Boolean,
       },
-      seeOverview: {
+      showOverview: {
         type: Boolean,
       },
     };
@@ -176,9 +179,7 @@ export default class VotePage extends observer(LitElement) {
     super();
     this.hasOngoingRequest = false;
     this.isLoading = true;
-    this.seeOverview = false;
-    this.onCloseMessage = () => { this.message = ""; };
-    this.isLoading = true;
+    this.showOverview = false;
 
     this.roundStartDate = "";
     this.endTime = "";
@@ -187,70 +188,168 @@ export default class VotePage extends observer(LitElement) {
     this.submissionIndex = 0;
   }
 
-  async firstUpdated() {
-    try {
-      if (!store.ongoingRound) {
-        await store.getOngoingRound();
-      }
-
-      const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
-
-      this.roundStartDate = submissionsStartAt.toLocaleDateString();
-      this.endTime = evaluationsEndAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-      this.endWeekday = evaluationsEndAt.toLocaleString(undefined, { weekday: "long" });
-      this.startTime = evaluationsStartAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-      this.startWeekday = evaluationsStartAt.toLocaleString(undefined, { weekday: "long" });
-
-      if (Date.now() > evaluationsEndAt) {
-        this.message = `O período para votar acabou ${this.endWeekday} às ${this.endTime}.`;
-        this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
-        this.isLoading = false;
-        return;
-      }
-
-      if (Date.now() < evaluationsStartAt) {
-        this.message = `O período para votar começa ${this.startWeekday} às ${this.startTime}.`;
-        this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
-        this.isLoading = false;
-        return;
-      }
-
-      const userAlreadyEvaluated = Array
-        .from(store.ongoingRound.evaluations.values())
-        .find((evaluation) => evaluation.evaluator.id === store.currentUser.id);
-
-      if (userAlreadyEvaluated) {
-        this.message = "Você já votou esta semana.";
-        this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
-        this.isLoading = false;
-        return;
-      }
-
-      const otherUsersSongs = Array.from(store.submissions.values())
-        .filter((sub) => sub.submitter.id !== store.currentUser.id);
-
-      if (otherUsersSongs.length) {
-        this.submissions = otherUsersSongs;
-      } else {
-        this.message = "Não há músicas para votar.";
-        this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
-        this.isLoading = false;
-        return;
-      }
-
-      this.score = this.getScore();
-      this.isFamous = this.getIsFamous();
-    } catch (e) {
-      this.message = e.message;
-      this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
+  render() {
+    if (this.isLoading) {
+      return html`
+        <paper-progress class="blue" indeterminate></paper-progress>
+      `;
     }
+
+    return html`
+        <default-background>
+            <section class="shell">
+                <h3>Votar</h3>
+                <h4>Semana ${this.roundStartDate}</h4>
+                <p>O limite para votação é até ${this.endTime} de ${this.endWeekday}</p>
+                <hr/>
+                ${this.showOverview ? this.overviewTemplate() : this.videoTemplate()}
+            </section>
+        </default-background>
+    `;
+  }
+
+  videoTemplate() {
+    const currentSubmission = this.submissions?.[this.submissionIndex];
+
+    if (!currentSubmission) {
+      return html``;
+    }
+
+    return html`
+        <h4 class="song-title">${currentSubmission.song.title}</h4>
+        <iframe src=${currentSubmission.song.url} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <input
+            type="number" max="10" min="1"
+            @input=${this.handleScoreInput}
+            .value=${this.score}
+        />
+        <label>
+          <input
+            type="checkbox"
+            @change=${this.handleIsFamousInput}
+            .checked=${this.isFamous}
+          />
+          Considero essa música famosa e contra as regras
+        </label>
+        <section class="navigation-section">
+            <button
+                ?disabled=${this.submissionIndex <= 0}
+                class="navigation-btn"
+                @click=${() => { this.submissionIndex -= 1; }}
+            >
+                <img src=${backwardArrows} alt="ir para música anterior"/>
+                <span>anterior</span>
+            </button>
+            <button
+                ?hidden=${this.submissionIndex >= this.submissions.length - 1}
+                class="navigation-btn"
+                @click=${() => { this.submissionIndex += 1; }}
+            >
+                <span>próxima</span>
+                <img src=${forwardArrows} alt="ir para próxima música"/>
+            </button>
+            <button
+                ?hidden=${!(this.submissionIndex >= this.submissions.length - 1)}
+                class="navigation-btn"
+                @click=${() => { this.showOverview = true; }}
+            >
+                <span>resumo</span>
+                <img src=${forwardArrows} alt="ver resumo das notas"/>
+            </button>
+        </section>
+      `;
+  }
+
+  overviewTemplate() {
+    return html`
+      ${this.submissions.map((sub) => html`
+        <label>${sub.song.title}</label>
+        <label>Nota ${window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-score`) || "inválida"}</label>
+        <label>${window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-is-famous`) === "true" ? "Famosa" : ""}</label>
+        <hr/>
+      `)}
+      <section class="navigation-section">
+          <button
+              class="navigation-btn"
+              @click=${() => { this.showOverview = false; }}
+          >
+              <img src=${backwardArrows} alt="voltar à votação"/>
+              <span>voltar</span>
+          </button>
+          <button
+              class="navigation-btn"
+              @click=${this.handleEvaluation.bind(this)}
+              ?disabled=${this.hasOngoingRequest}
+          >
+              <span>confirmar</span>
+          </button>
+      </section>
+    `;
+  }
+
+  async firstUpdated(changedProperties) {
+    await super.firstUpdated(changedProperties);
+    const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
+    this.setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt });
+    this.checkEvaluationsEnded(evaluationsEndAt);
+    this.checkEvaluationsStarted(evaluationsStartAt);
+    this.checkUserAlreadyEvaluated();
+    this.setSubmissions();
+    this.checkSubmissions();
+    this.updateSubmissionEvaluation();
     this.isLoading = false;
+  }
+
+  setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt }) {
+    this.roundStartDate = submissionsStartAt.toLocaleDateString();
+    this.endTime = evaluationsEndAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    this.endWeekday = evaluationsEndAt.toLocaleString(undefined, { weekday: "long" });
+    this.startTime = evaluationsStartAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    this.startWeekday = evaluationsStartAt.toLocaleString(undefined, { weekday: "long" });
+  }
+
+  checkEvaluationsEnded(evaluationsEndAt) {
+    if (Date.now() > evaluationsEndAt) {
+      this.safeOpenAlertModal(this.alertCodes.VOTE_PERIOD_OVER);
+    }
+  }
+
+  checkEvaluationsStarted(evaluationsStartAt) {
+    if (Date.now() < evaluationsStartAt) {
+      this.safeOpenAlertModal(this.alertCodes.VOTE_PERIOD_NOT_STARTED);
+    }
+  }
+
+  checkUserAlreadyEvaluated() {
+    const userAlreadyEvaluated = Array
+      .from(store.ongoingRound.evaluations.values())
+      .find((evaluation) => evaluation.evaluator.id === store.currentUser.id);
+
+    if (userAlreadyEvaluated) {
+      this.safeOpenAlertModal(this.alertCodes.ALREADY_VOTED);
+    }
+  }
+
+  setSubmissions() {
+    const otherUsersSongs = Array.from(store.submissions.values())
+      .filter((sub) => sub.submitter.id !== store.currentUser.id);
+    this.submissions = otherUsersSongs;
+  }
+
+  checkSubmissions() {
+    if (!this.submissions.length) {
+      this.safeOpenAlertModal(this.alertCodes.NO_SONGS);
+    }
+  }
+
+  updateSubmissionEvaluation() {
+    this.score = this.getScore();
+    this.isFamous = this.getIsFamous();
   }
 
   updated(changedProperties) {
     if (changedProperties.has("submissionIndex")) {
-      this.score = this.getScore();
-      this.isFamous = this.getIsFamous();
+      this.updateSubmissionEvaluation();
     }
   }
 
@@ -361,125 +460,19 @@ export default class VotePage extends observer(LitElement) {
           window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-score`);
           window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-is-famous`);
         });
-        this.message = "Voto enviado com sucesso!";
-        this.onCloseMessage = () => window.history.replaceState(null, "", "menu");
+        this.safeOpenAlertModal(this.alertCodes.VOTE_SUCCESS);
       }).catch(() => {
-        this.message = "Houve um problema ao tentar enviar seu voto. Tente novamente mais tarde.";
+        this.safeOpenAlertModal(this.alertCodes.VOTE_FAILED);
       });
     } catch (e) {
       this.hasOngoingRequest = false;
       const isScoreError = e.message.indexOf("/score") > 0;
       if (isScoreError) {
-        this.message = "Você não pontuou todas as músicas com um valor válido.";
+        this.safeOpenAlertModal(this.alertCodes.INVALID_SCORE);
       } else {
-        this.message = e.message;
+        this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_CLOSE_MODAL, e.message);
       }
     }
-  }
-
-  videoTemplate() {
-    const currentSubmission = this.submissions && this.submissions[this.submissionIndex];
-
-    if (!currentSubmission) {
-      return html``;
-    }
-
-    return html`
-        <h4 class="song-title">${currentSubmission.song.title}</h4>
-        <iframe src=${currentSubmission.song.url} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        <input
-            type="number" max="10" min="1"
-            @input=${this.handleScoreInput}
-            .value=${this.score}
-        />
-        <label>
-          <input
-            type="checkbox"
-            @change=${this.handleIsFamousInput}
-            .checked=${this.isFamous}
-          />
-          Considero essa música famosa e contra as regras
-        </label>
-        <section class="navigation-section">
-            <button
-                ?disabled=${this.submissionIndex <= 0}
-                class="navigation-btn"
-                @click=${() => { this.submissionIndex -= 1; }}
-            >
-                <img src=${backwardArrows} alt="ir para música anterior"/>
-                <span>anterior</span>
-            </button>
-            <button
-                .hidden=${this.submissionIndex >= this.submissions.length - 1}
-                class="navigation-btn"
-                @click=${() => { this.submissionIndex += 1; }}
-            >
-                <span>próxima</span>
-                <img src=${forwardArrows} alt="ir para próxima música"/>
-            </button>
-            <button
-                .hidden=${!(this.submissionIndex >= this.submissions.length - 1)}
-                class="navigation-btn"
-                @click=${() => { this.seeOverview = true; }}
-            >
-                <span>resumo</span>
-                <img src=${forwardArrows} alt="ver resumo das notas"/>
-            </button>
-        </section>
-      `;
-  }
-
-  overviewTemplate() {
-    return html`
-      ${this.submissions.map((sub) => html`
-        <label>${sub.song.title}</label>
-        <label>Nota ${window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-score`) || "inválida"}</label>
-        <label>${window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-is-famous`) === "true" ? "Famosa" : ""}</label>
-        <hr/>
-      `)}
-      <section class="navigation-section">
-          <button
-              class="navigation-btn"
-              @click=${() => { this.seeOverview = false; }}
-          >
-              <img src=${backwardArrows} alt="voltar à votação"/>
-              <span>voltar</span>
-          </button>
-          <button
-              class="navigation-btn"
-              @click=${this.handleEvaluation.bind(this)}
-              ?disabled=${this.hasOngoingRequest}
-          >
-              <span>confirmar</span>
-          </button>
-      </section>
-    `;
-  }
-
-  render() {
-    if (this.isLoading) {
-      return html`
-        <paper-progress class="blue" indeterminate></paper-progress>
-      `;
-    }
-
-    return html`
-        <alert-modal
-            .isOpen=${!!this.message}
-            @button-clicked="${this.onCloseMessage}"
-        >
-            ${this.message}
-        </alert-modal>
-        <default-background>
-            <section class="shell">
-                <h3>Votar</h3>
-                <h4>Semana ${this.roundStartDate}</h4>
-                <p>O limite para votação é até ${this.endTime} de ${this.endWeekday}</p>
-                <hr/>
-                ${this.seeOverview ? this.overviewTemplate() : this.videoTemplate()}
-            </section>
-        </default-background>
-    `;
   }
 }
 

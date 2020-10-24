@@ -16,17 +16,17 @@ export default CustomizableModalDisplayableMixin({
       messageGenerator() {
         return `O período para enviar músicas acabou ${this.endWeekdayString} ${this.endTimeString}.`;
       },
-      onCloseFunction: goToMenu,
+      onButtonClicked: goToMenu,
     }],
     [customizedAlertCodes.MAX_NUMBER_OF_SONGS, {
       needsErrorMessage: false,
       messageGenerator() { return "Você já enviou o número máximo de músicas para esta rodada"; },
-      onCloseFunction: goToMenu,
+      onButtonClicked: goToMenu,
     }],
     [customizedAlertCodes.INVALID_URL, {
       needsErrorMessage: false,
       messageGenerator() { return "O URL que você inseriu não é valido."; },
-      onCloseFunction: closeModal,
+      onButtonClicked: closeModal,
     }],
     [customizedAlertCodes.SUBMISSION_SUCCESS, {
       needsErrorMessage: false,
@@ -35,12 +35,12 @@ export default CustomizableModalDisplayableMixin({
           ? "Você ainda pode enviar mais uma música!"
           : ""}`;
       },
-      onCloseFunction: goToMenu,
+      onButtonClicked: goToMenu,
     }],
     [customizedAlertCodes.DUPLICATED_SONG, {
       needsErrorMessage: false,
       messageGenerator() { return "A música que você enviou já foi enviada antes. Tente outra música."; },
-      onCloseFunction: closeModal,
+      onButtonClicked: closeModal,
     }],
   ]),
 });

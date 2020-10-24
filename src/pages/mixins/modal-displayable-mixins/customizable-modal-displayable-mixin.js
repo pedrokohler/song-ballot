@@ -41,12 +41,12 @@ export default function CustomizableModalDisplaybleMixin(
           [this.alertCodes.UNEXPECTED_ERROR_GO_MENU, {
             needsErrorMessage: true,
             messageGenerator: (errorMessage) => errorMessage,
-            onCloseFunction: this.goToMenu,
+            onButtonClicked: this.goToMenu,
           }],
           [this.alertCodes.UNEXPECTED_ERROR_CLOSE_MODAL, {
             needsErrorMessage: true,
             messageGenerator: (errorMessage) => errorMessage,
-            onCloseFunction: this.closeModal,
+            onButtonClicked: this.closeModal,
           }],
         ]);
       }
@@ -57,7 +57,7 @@ export default function CustomizableModalDisplaybleMixin(
           throw new Error(`openAlertModal: Invalid alertCode. '${alertCode}' is not valid.`);
         }
 
-        const { needsErrorMessage, messageGenerator, onCloseFunction } = alerts.get(alertCode);
+        const { needsErrorMessage, messageGenerator, onButtonClicked } = alerts.get(alertCode);
         if (needsErrorMessage && !errorMessage) {
           throw new Error(
             `openAlertModal: Can't use '${alertCode}' alert without 'errorMessage' parameter. `
@@ -68,7 +68,7 @@ export default function CustomizableModalDisplaybleMixin(
         this.insertModalIntoShadowRoot({
           type: "alert",
           text: alertModalMessage,
-          onClose: onCloseFunction.bind(this),
+          onButtonClicked: onButtonClicked.bind(this),
         });
       }
 
@@ -80,7 +80,7 @@ export default function CustomizableModalDisplaybleMixin(
         }
       }
 
-      insertModalIntoShadowRoot({ type, text, onClose }) {
+      insertModalIntoShadowRoot({ type, text, onButtonClicked }) {
         const types = new Map([
           ["input", "input-modal"],
           ["alert", "alert-modal"],
@@ -91,7 +91,8 @@ export default function CustomizableModalDisplaybleMixin(
           const textNode = document.createTextNode(text);
           node.appendChild(textNode);
           node.addEventListener("button-clicked", (e) => {
-            if (onClose(e)) {
+            const shouldCloseModal = onButtonClicked(e);
+            if (shouldCloseModal) {
               node.remove();
             }
           });
