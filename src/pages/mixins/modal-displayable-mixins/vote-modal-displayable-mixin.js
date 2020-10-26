@@ -1,33 +1,33 @@
 import CustomizableModalDisplayableMixin, { goToMenu, closeModal } from "./customizable-modal-displayable-mixin";
 
 const customizedAlertCodes = {
-  VOTE_PERIOD_OVER: "vote-period-over",
-  VOTE_PERIOD_NOT_STARTED: "vote-period-not-started",
-  ALREADY_VOTED: "already-voted",
+  EVALUATION_PERIOD_OVER: "evaluation-period-over",
+  EVALUATION_PERIOD_NOT_STARTED: "evaluation-period-not-started",
+  ALREADY_EVALUATED: "already-evaluated",
   NO_SONGS: "no-songs",
-  VOTE_FAILED: "vote-failed",
+  EVALUATION_FAILED: "evaluation-failed",
   INVALID_SCORE: "invalid-score",
-  VOTE_SUCCESS: "vote-success",
+  VOTE_SUCCESS: "evaluation-success",
 };
 
 export default CustomizableModalDisplayableMixin({
   customizedAlertCodes,
   customizedAlerts: new Map([
-    [customizedAlertCodes.VOTE_PERIOD_OVER, {
+    [customizedAlertCodes.EVALUATION_PERIOD_OVER, {
       needsErrorMessage: false,
       messageGenerator() {
         return `O período para votar acabou ${this.endWeekday} às ${this.endTime}.`;
       },
       onButtonClicked: goToMenu,
     }],
-    [customizedAlertCodes.VOTE_PERIOD_NOT_STARTED, {
+    [customizedAlertCodes.EVALUATION_PERIOD_NOT_STARTED, {
       needsErrorMessage: false,
       messageGenerator() {
         return `O período para votar começa ${this.startWeekday} às ${this.startTime}.`;
       },
       onButtonClicked: goToMenu,
     }],
-    [customizedAlertCodes.ALREADY_VOTED, {
+    [customizedAlertCodes.ALREADY_EVALUATED, {
       needsErrorMessage: false,
       messageGenerator() {
         return "Você já votou esta semana.";
@@ -41,7 +41,7 @@ export default CustomizableModalDisplayableMixin({
       },
       onButtonClicked: goToMenu,
     }],
-    [customizedAlertCodes.VOTE_FAILED, {
+    [customizedAlertCodes.EVALUATION_FAILED, {
       needsErrorMessage: false,
       messageGenerator() {
         return "Houve um problema ao tentar enviar seu voto. Tente novamente mais tarde.";

@@ -83,7 +83,6 @@ export default class LoginPage extends observer(LitElement) {
     if (!store.currentGroup) {
       return html`
       <alert-modal
-        isOpen
         @button-clicked="${() => window.history.pushState(null, "", "logout")}"
       >
         Você precisa ser incluído em um grupo. Solicite a sua inclusão antes de prosseguir.

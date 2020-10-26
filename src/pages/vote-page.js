@@ -290,14 +290,57 @@ export default class VotePage extends SuperClass {
   async firstUpdated(changedProperties) {
     await super.firstUpdated(changedProperties);
     const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
+
     this.setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt });
-    this.checkEvaluationsEnded(evaluationsEndAt);
-    this.checkEvaluationsStarted(evaluationsStartAt);
-    this.checkUserAlreadyEvaluated();
-    this.setSubmissions();
-    this.checkSubmissions();
-    this.updateSubmissionEvaluation();
+
+    const nextStep = this.performChecksAndDecideNextStep({
+      onFailed: this.onInitialChecksFailed.bind(this),
+      onPassed: this.onInitialChecksPassed.bind(this),
+      checkFunctionsMap: this.getCheckFunctionsMap(),
+    });
+
+    nextStep();
+
     this.isLoading = false;
+  }
+
+  onInitialChecksPassed() {
+    this.setSubmissions();
+    this.updateSubmissionEvaluation();
+  }
+
+  onInitialChecksFailed(failedChecks) {
+    return () => {
+      this.safeOpenAlertModal(failedChecks?.[0]);
+    };
+  }
+
+  getCheckFunctionsMap() {
+    const { evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
+    const otherUsersSubmissions = this.getOtherUsersSubmissions(
+      store.currentUser,
+      store.submissions,
+    );
+
+    return new Map([
+      [this.hasEvaluationPeriodEnded(evaluationsEndAt),
+        this.alertCodes.EVALUATION_PERIOD_OVER],
+      [this.isBeforeEvaluationPeriodStarted(evaluationsStartAt),
+        this.alertCodes.EVALUATION_PERIOD_NOT_STARTED],
+      [this.hasUserAlreadyEvaluated(store.currentUser, store.ongoingRound.evaluations),
+        this.alertCodes.ALREADY_EVALUATED],
+      [this.hasNoOtherSubmissions(otherUsersSubmissions),
+        this.alertCodes.NO_SONGS],
+    ]);
+  }
+
+  performChecksAndDecideNextStep({ onPassed, onFailed, checkFunctionsMap: checks }) {
+    const errors = Array
+      .from(checks.entries())
+      .map(([check, error]) => (check() ? error : null))
+      .filter((error) => error !== null);
+
+    return errors.length ? onFailed(errors) : onPassed;
   }
 
   setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt }) {
@@ -308,38 +351,31 @@ export default class VotePage extends SuperClass {
     this.startWeekday = evaluationsStartAt.toLocaleString(undefined, { weekday: "long" });
   }
 
-  checkEvaluationsEnded(evaluationsEndAt) {
-    if (Date.now() > evaluationsEndAt) {
-      this.safeOpenAlertModal(this.alertCodes.VOTE_PERIOD_OVER);
-    }
+  hasEvaluationPeriodEnded(evaluationsEndAt) {
+    return () => Date.now() > evaluationsEndAt;
   }
 
-  checkEvaluationsStarted(evaluationsStartAt) {
-    if (Date.now() < evaluationsStartAt) {
-      this.safeOpenAlertModal(this.alertCodes.VOTE_PERIOD_NOT_STARTED);
-    }
+  isBeforeEvaluationPeriodStarted(evaluationsStartAt) {
+    return () => Date.now() < evaluationsStartAt;
   }
 
-  checkUserAlreadyEvaluated() {
-    const userAlreadyEvaluated = Array
-      .from(store.ongoingRound.evaluations.values())
-      .find((evaluation) => evaluation.evaluator.id === store.currentUser.id);
+  hasUserAlreadyEvaluated(currentUser, evaluations) {
+    return () => Boolean(Array
+      .from(evaluations.values())
+      .find((evaluation) => evaluation.evaluator.id === currentUser.id));
+  }
 
-    if (userAlreadyEvaluated) {
-      this.safeOpenAlertModal(this.alertCodes.ALREADY_VOTED);
-    }
+  hasNoOtherSubmissions(otherUserSubmissions) {
+    return () => Boolean(otherUserSubmissions.length);
+  }
+
+  getOtherUsersSubmissions(currentUser, submissions) {
+    return Array.from(submissions.values())
+      .filter((sub) => sub.submitter.id !== currentUser.id);
   }
 
   setSubmissions() {
-    const otherUsersSongs = Array.from(store.submissions.values())
-      .filter((sub) => sub.submitter.id !== store.currentUser.id);
-    this.submissions = otherUsersSongs;
-  }
-
-  checkSubmissions() {
-    if (!this.submissions.length) {
-      this.safeOpenAlertModal(this.alertCodes.NO_SONGS);
-    }
+    this.submissions = this.getOtherUsersSubmissions(store.currentUser, store.submissions);
   }
 
   updateSubmissionEvaluation() {
@@ -354,17 +390,17 @@ export default class VotePage extends SuperClass {
   }
 
   getScore() {
-    const currentSubmission = this.submissions && this.submissions[this.submissionIndex];
+    const currentSubmission = this.submissions?.[this.submissionIndex];
     if (currentSubmission) {
-      const value = window.localStorage.getItem(`${currentSubmission.id}-${store.currentUser.id}-score`);
+      const value = window.localStorage.getItem(`${currentSubmission?.id}-${store.currentUser.id}-score`);
       return value || "";
     }
     return "";
   }
 
   getIsFamous() {
-    const currentSubmission = this.submissions[this.submissionIndex];
-    const value = window.localStorage.getItem(`${currentSubmission.id}-${store.currentUser.id}-is-famous`);
+    const currentSubmission = this.submissions?.[this.submissionIndex];
+    const value = window.localStorage.getItem(`${currentSubmission?.id}-${store.currentUser.id}-is-famous`);
     if (value === "true") {
       return true;
     }
@@ -462,7 +498,7 @@ export default class VotePage extends SuperClass {
         });
         this.safeOpenAlertModal(this.alertCodes.VOTE_SUCCESS);
       }).catch(() => {
-        this.safeOpenAlertModal(this.alertCodes.VOTE_FAILED);
+        this.safeOpenAlertModal(this.alertCodes.EVALUATION_FAILED);
       });
     } catch (e) {
       this.hasOngoingRequest = false;
