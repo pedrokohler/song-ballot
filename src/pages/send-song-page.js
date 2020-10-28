@@ -194,10 +194,39 @@ export default class SendSongPage extends SuperClass {
     await super.firstUpdated(changedProperties);
     const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
     this.setDateStrings(submissionsStartAt, submissionsEndAt);
-    this.checkSubmissionsEnded(submissionsEndAt);
     this.setSongLimit();
-    this.checkSongLimit();
+    this.setSongsSent();
+
+    const errors = this.checkForErrors(this.getCheckFunctionsMap());
+    if (errors.length) {
+      this.onInitialChecksFailed(errors);
+    }
+
     this.isLoading = false;
+  }
+
+  getCheckFunctionsMap() {
+    const { submissionsEndAt } = store.ongoingRound;
+
+    return new Map([
+      [this.checkSubmissionsEnded(submissionsEndAt),
+        this.alertCodes.SUBMISSION_PERIOD_OVER],
+      [this.checkSongLimit(),
+        this.alertCodes.MAX_NUMBER_OF_SONGS],
+    ]);
+  }
+
+  checkForErrors(checkFunctionsMap) {
+    const errors = Array
+      .from(checkFunctionsMap.entries())
+      .map(([check, error]) => (check() ? error : null))
+      .filter((error) => error !== null);
+
+    return errors;
+  }
+
+  onInitialChecksFailed(failedChecks) {
+    this.safeOpenAlertModal(failedChecks?.[0]);
   }
 
   setDateStrings(submissionsStartAt, submissionsEndAt) {
@@ -207,9 +236,7 @@ export default class SendSongPage extends SuperClass {
   }
 
   checkSubmissionsEnded(submissionsEndAt) {
-    if (Date.now() > submissionsEndAt) {
-      this.safeOpenAlertModal(this.alertCodes.SUBMISSION_PERIOD_OVER);
-    }
+    return () => Date.now() > submissionsEndAt;
   }
 
   setSongLimit() {
@@ -220,16 +247,16 @@ export default class SendSongPage extends SuperClass {
     }
   }
 
-  checkSongLimit() {
+  setSongsSent() {
     const userSubmissions = Array
       .from(store.submissions.values())
       .filter((submission) => submission.submitter.id === store.currentUser.id);
 
     this.songsSent = userSubmissions.length;
+  }
 
-    if (this.songsSent >= this.songLimit) {
-      this.safeOpenAlertModal(this.alertCodes.MAX_NUMBER_OF_SONGS);
-    }
+  checkSongLimit() {
+    return () => this.songsSent >= this.songLimit;
   }
 
   async handleConfirmationClick() {

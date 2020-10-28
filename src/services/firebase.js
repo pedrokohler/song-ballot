@@ -4,6 +4,7 @@ let firebaseConfig;
 
 const DEV_ENVIRONMENT = process.env.NODE_ENV === "development";
 
+// @ todo refactor
 if (DEV_ENVIRONMENT) {
   firebaseConfig = {
     apiKey: "AIzaSyAl8D13_-_lvSWb4680AUCh9bvLjQI4o2I",
@@ -27,7 +28,7 @@ if (DEV_ENVIRONMENT) {
 }
 
 firebase.initializeApp(firebaseConfig);
-// @todo remove this for production
+// @todo remove this for real app
 window.firebase = firebase;
 
 export const db = firebase.firestore();

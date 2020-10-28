@@ -289,30 +289,27 @@ export default class VotePage extends SuperClass {
 
   async firstUpdated(changedProperties) {
     await super.firstUpdated(changedProperties);
+
+    const errors = this.checkForErrors(this.getCheckFunctionsMap());
     const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
 
     this.setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt });
-
-    const nextStep = this.performChecksAndDecideNextStep({
-      onFailed: this.onInitialChecksFailed.bind(this),
-      onPassed: this.onInitialChecksPassed.bind(this),
-      checkFunctionsMap: this.getCheckFunctionsMap(),
-    });
-
-    nextStep();
+    if (errors.length) {
+      this.onInitialChecksFailed(errors);
+    } else {
+      this.onInitialChecksPassed();
+    }
 
     this.isLoading = false;
   }
 
   onInitialChecksPassed() {
     this.setSubmissions();
-    this.updateSubmissionEvaluation();
+    this.refreshScreenSubmissionEvaluation();
   }
 
   onInitialChecksFailed(failedChecks) {
-    return () => {
-      this.safeOpenAlertModal(failedChecks?.[0]);
-    };
+    this.safeOpenAlertModal(failedChecks?.[0]);
   }
 
   getCheckFunctionsMap() {
@@ -334,20 +331,24 @@ export default class VotePage extends SuperClass {
     ]);
   }
 
-  performChecksAndDecideNextStep({ onPassed, onFailed, checkFunctionsMap: checks }) {
+  checkForErrors(checkFunctionsMap) {
     const errors = Array
-      .from(checks.entries())
+      .from(checkFunctionsMap.entries())
       .map(([check, error]) => (check() ? error : null))
       .filter((error) => error !== null);
 
-    return errors.length ? onFailed(errors) : onPassed;
+    return errors;
   }
 
   setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt }) {
     this.roundStartDate = submissionsStartAt.toLocaleDateString();
-    this.endTime = evaluationsEndAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+
+    this.endTime = evaluationsEndAt.toLocaleTimeString(undefined,
+      { hour: "2-digit", minute: "2-digit" });
+    this.startTime = evaluationsStartAt.toLocaleTimeString(undefined,
+      { hour: "2-digit", minute: "2-digit" });
+
     this.endWeekday = evaluationsEndAt.toLocaleString(undefined, { weekday: "long" });
-    this.startTime = evaluationsStartAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
     this.startWeekday = evaluationsStartAt.toLocaleString(undefined, { weekday: "long" });
   }
 
@@ -366,7 +367,7 @@ export default class VotePage extends SuperClass {
   }
 
   hasNoOtherSubmissions(otherUserSubmissions) {
-    return () => Boolean(otherUserSubmissions.length);
+    return () => otherUserSubmissions.length === 0;
   }
 
   getOtherUsersSubmissions(currentUser, submissions) {
@@ -378,137 +379,315 @@ export default class VotePage extends SuperClass {
     this.submissions = this.getOtherUsersSubmissions(store.currentUser, store.submissions);
   }
 
-  updateSubmissionEvaluation() {
-    this.score = this.getScore();
-    this.isFamous = this.getIsFamous();
+  refreshScreenSubmissionEvaluation() {
+    const { id } = this.submissions?.[this.submissionIndex];
+    this.score = this.getScore(id);
+    this.isFamous = this.getIsFamous(id);
   }
 
   updated(changedProperties) {
     if (changedProperties.has("submissionIndex")) {
-      this.updateSubmissionEvaluation();
+      this.refreshScreenSubmissionEvaluation();
     }
   }
 
-  getScore() {
-    const currentSubmission = this.submissions?.[this.submissionIndex];
-    if (currentSubmission) {
-      const value = window.localStorage.getItem(`${currentSubmission?.id}-${store.currentUser.id}-score`);
-      return value || "";
-    }
-    return "";
+  getScore(id) {
+    const value = this.getScoreFromLocalStorage(id);
+    return value || "";
   }
 
-  getIsFamous() {
-    const currentSubmission = this.submissions?.[this.submissionIndex];
-    const value = window.localStorage.getItem(`${currentSubmission?.id}-${store.currentUser.id}-is-famous`);
+  getScoreFromLocalStorage(id) {
+    const value = window.localStorage
+      .getItem(`${id}-${store.currentUser.id}-score`);
+    return Number(value);
+  }
+
+  getIsFamous(id) {
+    const value = this.getIsFamousFromLocalStorage(id);
     if (value === "true") {
       return true;
     }
     return false;
   }
 
+  getIsFamousFromLocalStorage(id) {
+    const value = window.localStorage
+      .getItem(`${id}-${store.currentUser.id}-is-famous`);
+    return value;
+  }
+
   handleIsFamousInput(e) {
+    const isChecked = e.target.checked;
+
+    this.setCurrentIsFamousInMemory(isChecked);
+    this.setCurrentIsFamousInLocalStorage(isChecked);
+  }
+
+  setCurrentIsFamousInLocalStorage(value) {
     const currentSubmission = this.submissions[this.submissionIndex];
-    window.localStorage.setItem(`${currentSubmission.id}-${store.currentUser.id}-is-famous`, e.target.checked);
-    this.isFamous = e.target.checked;
+    window.localStorage
+      .setItem(`${currentSubmission.id}-${store.currentUser.id}-is-famous`, value);
+  }
+
+  setCurrentIsFamousInMemory(value) {
+    this.isFamous = value;
   }
 
   handleScoreInput(e) {
     const { value } = e.target;
-    let newValue;
+    const formattedValue = this.formatScoreValue(value);
 
-    if ((Number.isInteger(value) && value >= 1 && value <= 10) || value === "") {
-      newValue = value;
-    } else {
-      if (value > 10) {
-        newValue = 10;
-      } else if (value < 1) {
-        newValue = 1;
-      } else {
-        newValue = value;
-      }
-      newValue = Math.round(newValue);
-    }
+    this.setCurrentScoreInMemory(formattedValue);
+    this.setCurrentScoreInLocalStorage(formattedValue);
+    this.setCurrentScoreInInputField(e, formattedValue);
+  }
 
+  setCurrentScoreInLocalStorage(value) {
     const currentSubmission = this.submissions[this.submissionIndex];
-    window.localStorage.setItem(`${currentSubmission.id}-${store.currentUser.id}-score`, newValue);
-    e.target.value = newValue;
-    this.score = newValue;
+
+    window.localStorage
+      .setItem(`${currentSubmission.id}-${store.currentUser.id}-score`, value);
+  }
+
+  setCurrentScoreInInputField(inputEvent, value) {
+    inputEvent.target.value = value;
+  }
+
+  setCurrentScoreInMemory(value) {
+    this.score = value;
+  }
+
+  formatScoreValue(value) {
+    if (this.isScoreInputAllowed(value)) {
+      return value;
+    }
+    const formattedValue = this.adjustScoreValue(value);
+    return formattedValue;
+  }
+
+  adjustScoreValue(value) {
+    const max = 10;
+    const min = 1;
+    const roundedValue = Math.round(value);
+    return Math.max(min, Math.min(max, roundedValue));
+  }
+
+  isScoreInputAllowed(value) {
+    return (
+      Number.isInteger(value)
+      && value >= 1
+      && value <= 10
+    )
+    || value === "";
   }
 
   async handleEvaluation() {
     this.hasOngoingRequest = true;
     try {
-      const evaluations = this.submissions.map((sub) => {
-        const evaluationModel = store.addEvaluation({
-          id: store.generateId(),
-          evaluator: store.currentUser.id,
-          evaluatee: sub.submitter.id,
-          song: sub.song.id,
-          score: Number(window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-score`)),
-          ratedFamous: window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-is-famous`) === "true",
-          round: store.ongoingRound.id,
-        });
-        sub.addEvaluation(evaluationModel.id);
-        store.ongoingRound.addEvaluation(evaluationModel.id);
-        return getSnapshot(evaluationModel);
-      });
-
-      const submissionsIds = this.submissions.map((sub) => sub.id);
+      const evaluations = this.getSanitizedEvaluationsPayload();
       const evaluationsIds = evaluations.map((evaluation) => evaluation.id);
+      const submissionsIds = this.submissions.map((sub) => sub.id);
+      const roundRef = this.getRoundRef(store.ongoingRound.id);
 
-      const roundRef = db.collection("groups").doc(store.currentGroup).collection("rounds")
-        .doc(store.ongoingRound.id)
-        .withConverter(DateConverter);
+      await db.runTransaction(this.evaluationTransaction({
+        roundRef,
+        submissionsIds,
+        evaluationsIds,
+        evaluations,
+      }));
 
-      db.runTransaction(async (transaction) => {
-        const round = await transaction.get(roundRef);
-        const roundEvaluations = round.data().evaluations || [];
-        const submissions = await Promise.all(submissionsIds.map(async (id) => {
-          const subRef = db.collection("groups").doc(store.currentGroup).collection("submissions").doc(id)
-            .withConverter(DateConverter);
-          const submission = transaction.get(subRef);
-          return submission;
+      this.updateStore(evaluations);
+      this.runPostTransactionCleanup();
+      this.safeOpenAlertModal(this.alertCodes.VOTE_SUCCESS);
+    } catch (e) {
+      this.checkAndTreatEvaluationError(e);
+      this.hasOngoingRequest = false;
+    }
+  }
+
+  checkAndTreatEvaluationError(e) {
+    if (this.isScoreError(e)) {
+      this.safeOpenAlertModal(this.alertCodes.INVALID_SCORE);
+    } else {
+      this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_CLOSE_MODAL, e.message);
+    }
+  }
+
+  isScoreError(e) {
+    return e.message.indexOf("/score") > 0;
+  }
+
+  getSanitizedEvaluationsPayload() {
+    return this.submissions.map((sub) => {
+      const evaluationModel = store.createEvaluationModel({
+        submission: sub,
+        score: this.getScore(sub.id),
+        ratedFamous: this.getIsFamous(sub.id),
+      });
+      return getSnapshot(evaluationModel);
+    });
+  }
+
+  updateStore(evaluationsPayloads) {
+    this.submissions.forEach((sub) => {
+      const respectiveEvaluation = evaluationsPayloads.find((ev) => ev.song === sub.song.id);
+      const evaluationModel = store.addEvaluation(respectiveEvaluation);
+      sub.addEvaluation(evaluationModel.id);
+      store.ongoingRound.addEvaluation(evaluationModel.id);
+    });
+  }
+
+  evaluationTransaction({
+    roundRef,
+    submissionsIds,
+    evaluations,
+    evaluationsIds,
+  }) {
+    return async (transaction) => {
+      try {
+        const {
+          round,
+          roundEvaluations,
+          submissions,
+        } = await this.getSubmissionsAndRoundData({
+          roundRef,
+          submissionsIds,
+          transaction,
+        });
+
+        submissions.forEach(this.persistEvaluationAndUpdateSubmission({
+          evaluations,
+          transaction,
         }));
 
-        submissions.forEach(async (submission) => {
-          const subData = submission.data();
-          const subEvaluations = subData.evaluations;
-          const evaluation = evaluations
-            .find((subEvaluation) => subEvaluation.song === subData.song);
-          const evalRef = db.collection("groups").doc(store.currentGroup).collection("evaluations").doc(evaluation.id)
-            .withConverter(DateConverter);
-
-          await transaction
-            .update(
-              submission.ref.parent.doc(submission.id),
-              { evaluations: [...subEvaluations, evaluation.id] },
-            );
-          await transaction.set(evalRef, evaluation);
+        await this.persistUpdatedRound({
+          round,
+          roundRef,
+          roundEvaluations,
+          evaluationsIds,
+          transaction,
         });
-        await transaction
-          .update(roundRef, {
-            evaluations: [...roundEvaluations, ...evaluationsIds],
-            voteCount: round.data().voteCount + 1,
-          });
-      }).then(() => {
-        this.submissions.forEach((sub) => {
-          window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-score`);
-          window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-is-famous`);
-        });
-        this.safeOpenAlertModal(this.alertCodes.VOTE_SUCCESS);
-      }).catch(() => {
+      } catch (e) {
         this.safeOpenAlertModal(this.alertCodes.EVALUATION_FAILED);
-      });
-    } catch (e) {
-      this.hasOngoingRequest = false;
-      const isScoreError = e.message.indexOf("/score") > 0;
-      if (isScoreError) {
-        this.safeOpenAlertModal(this.alertCodes.INVALID_SCORE);
-      } else {
-        this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_CLOSE_MODAL, e.message);
       }
-    }
+    };
+  }
+
+  async getSubmissionsAndRoundData({
+    roundRef,
+    submissionsIds,
+    transaction,
+  }) {
+    const round = await transaction.get(roundRef);
+    const roundEvaluations = round.data().evaluations || [];
+    const submissions = await this.getSubmissions({
+      submissionsIds,
+      transaction,
+    });
+    return {
+      round,
+      roundEvaluations,
+      submissions,
+    };
+  }
+
+  persistEvaluationAndUpdateSubmission({
+    evaluations,
+    transaction,
+  }) {
+    return async (submission) => {
+      const subData = submission.data();
+      const subEvaluations = subData.evaluations;
+      const evaluation = evaluations.find((ev) => ev.song === subData.song);
+      const evalRef = this.getEvaluationRef(evaluation.id);
+
+      await this.persistUpdatedSubmission({
+        submission,
+        subEvaluations,
+        evaluation,
+        transaction,
+      });
+      await this.persistEvaluation({
+        evaluation,
+        evalRef,
+        transaction,
+      });
+    };
+  }
+
+  getSubmissions({
+    submissionsIds,
+    transaction,
+  }) {
+    return Promise.all(submissionsIds.map(async (id) => {
+      const subRef = this.getSubmissionRef(id);
+      const submission = transaction.get(subRef);
+      return submission;
+    }));
+  }
+
+  persistUpdatedSubmission({
+    submission,
+    subEvaluations,
+    evaluation,
+    transaction,
+  }) {
+    return transaction
+      .update(
+        submission.ref.parent.doc(submission.id),
+        { evaluations: [...subEvaluations, evaluation.id] },
+      );
+  }
+
+  persistEvaluation({
+    evaluation,
+    evalRef,
+    transaction,
+  }) {
+    return transaction.set(evalRef, evaluation);
+  }
+
+  persistUpdatedRound({
+    round,
+    roundRef,
+    roundEvaluations,
+    evaluationsIds,
+    transaction,
+  }) {
+    return transaction
+      .update(roundRef, {
+        evaluations: [...roundEvaluations, ...evaluationsIds],
+        voteCount: round.data().voteCount + 1,
+      });
+  }
+
+  runPostTransactionCleanup() {
+    this.submissions.forEach((sub) => {
+      window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-score`);
+      window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-is-famous`);
+    });
+  }
+
+  getEvaluationRef(submissionId) {
+    return this.groupRef.collection("evaluations")
+      .doc(submissionId)
+      .withConverter(DateConverter);
+  }
+
+  getSubmissionRef(submissionId) {
+    return this.groupRef.collection("submissions")
+      .doc(submissionId)
+      .withConverter(DateConverter);
+  }
+
+  getRoundRef(roundId) {
+    return this.groupRef.collection("rounds")
+      .doc(roundId)
+      .withConverter(DateConverter);
+  }
+
+  get groupRef() {
+    return db.collection("groups").doc(store.currentGroup);
   }
 }
 

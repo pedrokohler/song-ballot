@@ -5,6 +5,7 @@ export const DefaultModel = types.model({
   id: types.optional(types.identifier, () => uuid()),
   createdAt: types.optional(types.Date, () => Date.now()),
 }).postProcessSnapshot((snapshot) => ({
+  // @todo substitute deprecated postProcessSnapshot for snapshotProcessor
   ...snapshot,
   createdAt: new Date(snapshot.createdAt),
 })).actions(() => ({
