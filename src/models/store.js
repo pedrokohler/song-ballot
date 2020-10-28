@@ -1,5 +1,5 @@
 /* eslint-disable no-param-reassign */
-import { types } from "mobx-state-tree";
+import { types, flow, typecheck } from "mobx-state-tree";
 
 import { db, DateConverter } from "../services/firebase";
 import { User } from "./user";
@@ -9,13 +9,20 @@ import { Evaluation } from "./evaluation";
 import { Round } from "./round";
 import { DefaultModel } from "./default";
 
+const chunkArray = (array, maxElements) => array
+  .reduce((acc, el, i) => {
+    const index = Math.floor(i / maxElements);
+    const updatedChunk = (acc[index] || []).concat(el);
+    return [...acc.slice(0, index), updatedChunk, ...acc.slice(index + 1)];
+  }, []);
+
 export const RootStore = types
   .compose(DefaultModel)
   .named("RootStore")
   .props({
     authStateChecked: types.boolean,
     currentUser: types.maybeNull(types.reference(User)),
-    currentGroup: types.maybeNull(types.string), // @todo check if this is the best option
+    currentGroup: types.maybeNull(types.string),
     ongoingRound: types.maybe(types.reference(Round)),
     users: types.map(User),
     songs: types.map(Song),
@@ -35,13 +42,16 @@ export const RootStore = types
     },
     createSongModel({ ...props }) {
       const { videoId, videoURL, videoTitle } = props;
-      return Song.create({
+      const payload = {
         id: videoId,
         url: videoURL,
         title: videoTitle,
         round: self.ongoingRound.id,
         user: self.currentUser.id,
-      });
+      };
+      typecheck(Song, payload);
+      const song = Song.create(payload);
+      return song;
     },
     addSubmission({ ...props }) {
       const { id } = props;
@@ -49,13 +59,16 @@ export const RootStore = types
       return self.submissions.get(id);
     },
     createSubmissionModel(videoId) {
-      return Submission.create({
+      const payload = {
         id: self.generateId(),
         submitter: self.currentUser.id,
         song: videoId,
         evaluations: [],
         round: self.ongoingRound.id,
-      });
+      };
+      typecheck(Submission, payload);
+      const submission = Submission.create(payload);
+      return submission;
     },
     addRound({ ...props }) {
       const { id } = props;
@@ -67,36 +80,50 @@ export const RootStore = types
       self.evaluations.set(id, evaluation);
       return evaluation;
     },
+    createEvaluationModel({ submission, ratedFamous, score }) {
+      const payload = {
+        id: self.generateId(),
+        evaluator: self.currentUser.id,
+        evaluatee: submission.submitter.id,
+        song: submission.song.id,
+        score,
+        ratedFamous,
+        round: self.ongoingRound.id,
+      };
+      typecheck(Evaluation, payload);
+      const evaluation = Evaluation.create(payload);
+      return evaluation;
+    },
     setOngoingRound(id) {
       self.ongoingRound = id;
     },
     setCurrentGroup(id) {
       self.currentGroup = id;
     },
-    getOngoingRound() {
-      return new Promise((resolve, reject) => {
-        db.collection("groups")
-          .doc(self.currentGroup)
-          .get()
-          .then((groupDoc) => {
-            const { ongoingRound: ongoingRoundId } = groupDoc.data();
-            db.collection("groups").doc(self.currentGroup).collection("rounds").doc(ongoingRoundId)
-              .withConverter(DateConverter)
-              .get()
-              .then(async (roundDoc) => {
-                const ongoingRound = { id: ongoingRoundId, ...roundDoc.data() };
-                self.addRound(ongoingRound);
-                self.setOngoingRound(ongoingRoundId);
-                await self.loadRoundUsers(ongoingRound.users);
-                await self.loadRoundSongs(ongoingRoundId);
-                await self.loadRoundSubmissions(ongoingRoundId);
-                await self.loadRoundEvaluations(ongoingRoundId);
-                return resolve();
-              });
-          })
-          .catch(reject);
-      });
+    getCurrentGroupRef() {
+      return db.collection("groups").doc(self.currentGroup);
     },
+    getRoundRef(roundId) {
+      return self
+        .getCurrentGroupRef()
+        .collection("rounds")
+        .doc(roundId)
+        .withConverter(DateConverter);
+    },
+    getOngoingRound: flow(function* getOngoingRound() {
+      const groupDoc = yield self.getCurrentGroupRef().get();
+      const { ongoingRound: ongoingRoundId } = groupDoc.data();
+
+      const roundDoc = yield self.getRoundRef(ongoingRoundId).get();
+      const ongoingRound = { id: ongoingRoundId, ...roundDoc.data() };
+
+      self.addRound(ongoingRound);
+      self.setOngoingRound(ongoingRoundId);
+      yield self.loadRoundUsers(ongoingRound.users);
+      yield self.loadRoundSongs(ongoingRoundId);
+      yield self.loadRoundSubmissions(ongoingRoundId);
+      yield self.loadRoundEvaluations(ongoingRoundId);
+    }),
     setAuthStateChecked(status) {
       self.authStateChecked = status;
     },
@@ -110,80 +137,67 @@ export const RootStore = types
         self.currentUser = null;
       }
     },
-    async loadRoundUsers([...userIds]) {
-      // @todo: refactor function
-      const loadBatch = (batch) => db.collection("users")
+    loadRoundUsers([...userIds]) {
+      const generateQueryRef = (batch) => db.collection("users")
         .where("id", "in", batch)
-        .withConverter(DateConverter).get()
-        .then((snapshot) => {
-          snapshot.forEach((doc) => self.addUser(doc.data()));
-        });
+        .withConverter(DateConverter);
 
-      const batchSize = 10;
-      let i = 0;
-      let batch;
-      do {
-        batch = userIds.slice(i, i + batchSize);
-        if (batch.length) {
-          // eslint-disable-next-line no-await-in-loop
-          await loadBatch(batch);
-        }
-        i += batchSize;
-      } while (batch.length);
+      const performQueryAndUpdateStore = async (queryRef) => {
+        const users = await queryRef.get();
+        users.forEach((user) => self.addUser(user.data()));
+      };
+
+      const maxUsersPerQuery = 10; // firebase limit for 'in' operator
+      const queryRefs = chunkArray(userIds, maxUsersPerQuery).map((ids) => generateQueryRef(ids));
+
+      return Promise.all(queryRefs.map((queryRef) => performQueryAndUpdateStore(queryRef)));
+    },
+    getSongsRef(roundId) {
+      return self.getCurrentGroupRef()
+        .collection("songs")
+        .where("round", "==", roundId)
+        .withConverter(DateConverter);
     },
     loadRoundSongs(roundId) {
-      return new Promise((resolve, reject) => {
-        db.collection("groups")
-          .doc(self.currentGroup)
-          .collection("songs")
-          .where("round", "==", roundId)
-          .withConverter(DateConverter)
-          .get()
-          .then((snapshot) => {
-            snapshot.forEach((doc) => {
-              const song = doc.data();
-              self.addSong(song);
-            });
-            resolve();
-          })
-          .catch(reject);
-      });
+      return self.getSongsRef(roundId)
+        .get()
+        .then((snapshot) => {
+          snapshot.forEach((doc) => {
+            const song = doc.data();
+            self.addSong(song);
+          });
+        });
+    },
+    getSubmissionsRef(roundId) {
+      return self.getCurrentGroupRef()
+        .collection("submissions")
+        .where("round", "==", roundId)
+        .withConverter(DateConverter);
     },
     loadRoundSubmissions(roundId) {
-      return new Promise((resolve, reject) => {
-        db.collection("groups")
-          .doc(self.currentGroup)
-          .collection("submissions")
-          .where("round", "==", roundId)
-          .withConverter(DateConverter)
-          .get()
-          .then((snapshot) => {
-            snapshot.forEach((doc) => {
-              const submission = doc.data();
-              self.addSubmission(submission);
-            });
-            resolve();
-          })
-          .catch(reject);
-      });
+      return self.getSubmissionsRef(roundId)
+        .get()
+        .then((snapshot) => {
+          snapshot.forEach((doc) => {
+            const submission = doc.data();
+            self.addSubmission(submission);
+          });
+        });
+    },
+    getEvaluationsRef(roundId) {
+      return self.getCurrentGroupRef()
+        .collection("evaluations")
+        .where("round", "==", roundId)
+        .withConverter(DateConverter);
     },
     loadRoundEvaluations(roundId) {
-      return new Promise((resolve, reject) => {
-        db.collection("groups")
-          .doc(self.currentGroup)
-          .collection("evaluations")
-          .where("round", "==", roundId)
-          .withConverter(DateConverter)
-          .get()
-          .then((snapshot) => {
-            snapshot.forEach((doc) => {
-              const evaluation = doc.data();
-              self.addEvaluation(evaluation);
-            });
-            resolve();
-          })
-          .catch(reject);
-      });
+      return this.getEvaluationsRef(roundId)
+        .get()
+        .then((snapshot) => {
+          snapshot.forEach((doc) => {
+            const evaluation = doc.data();
+            self.addEvaluation(evaluation);
+          });
+        });
     },
-
   }));
