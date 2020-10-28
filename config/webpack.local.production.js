@@ -9,7 +9,7 @@ module.exports = merge(common, {
    *
    * Set the mode to development or production.
    */
-  mode: "development",
+  mode: "production",
 
   /**
    * Devtool

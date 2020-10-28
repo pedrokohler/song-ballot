@@ -7,6 +7,7 @@
   "license": "MIT",
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack-dev-server --config config/webpack.dev.js",
+    "start:as:production": "cross-env NODE_ENV=production webpack-dev-server --config config/webpack.local.production.js",
     "build": "cross-env NODE_ENV=production webpack --config config/webpack.prod.js",
     "deploy": "node ./config/scripts/deploy.js",
     "deploy:functions:dev": "node ./functions/scripts/deploy-dev.js",
