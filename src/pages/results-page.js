@@ -1,5 +1,4 @@
 import { LitElement, html, css } from "lit-element";
-import { observer } from "mobx-lit-element";
 import "@polymer/paper-progress/paper-progress";
 
 import "../components/default-background";
@@ -7,8 +6,16 @@ import "../components/alert-modal";
 import forwardArrows from "../images/forward-arrows.png";
 import backwardArrows from "../images/backward-arrows.png";
 import { store } from "../store";
+import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
+import VoteModalDisplayableMixin from "./mixins/modal-displayable-mixins/vote-modal-displayable-mixin";
 
-export default class ResultsPage extends observer(LitElement) {
+const SuperClass = VoteModalDisplayableMixin(
+  OngoingRoundDependableMixin(
+    LitElement,
+  ),
+);
+
+export default class ResultsPage extends SuperClass {
   static get styles() {
     return css`
         .shell {
@@ -130,9 +137,6 @@ export default class ResultsPage extends observer(LitElement) {
 
   static get properties() {
     return {
-      error: {
-        type: String,
-      },
       isLoading: {
         type: Boolean,
       },
@@ -154,16 +158,16 @@ export default class ResultsPage extends observer(LitElement) {
           `;
   }
 
-  async firstUpdated() {
-    this.onCloseError = () => { this.error = ""; };
-    this.submissionIndex = 0;
+  constructor() {
+    super();
     this.isLoading = true;
+    this.submissionIndex = 0;
     this.startDate = "";
+  }
 
+  async firstUpdated(changedProperties) {
     try {
-      if (!store.ongoingRound) {
-        await store.getOngoingRound();
-      }
+      await super.firstUpdated(changedProperties);
 
       const playerVotes = Array.from(store.ongoingRound.evaluations.values())
         .filter((ev) => ev.evaluator.id === store.currentUser.id);
@@ -179,11 +183,14 @@ export default class ResultsPage extends observer(LitElement) {
       this.startDate = submissionsStartAt.toLocaleDateString();
       this.currentSubmission = store.ongoingRound?.firstPlace;
     } catch (e) {
-      this.onCloseError = () => window.history.replaceState(null, "", "menu");
-      this.error = e.message;
+      this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU, e.message);
     }
 
     this.isLoading = false;
+  }
+
+  get currentSubmission() {
+    return this.submissions?.[this.submissionIndex || 0];
   }
 
   render() {
@@ -193,19 +200,14 @@ export default class ResultsPage extends observer(LitElement) {
       `;
     }
 
-    this.currentSubmission = this.submissions?.[this.submissionIndex || 0];
-
     return html`
-        <alert-modal
-            .isOpen=${!!this.error}
-            @button-clicked="${this.onCloseError}"
-        >
-            ${this.error}
-        </alert-modal>
         <default-background>
             <section class="shell">
                 <h3>Resultado</h3>
                 <h4>Semana ${this.startDate}</h4>
+                ${this.playerEntryTemplate("Vencedor", "firstPlace")}
+                ${this.playerEntryTemplate("Segundo colocado", "secondPlace")}
+                ${this.playerEntryTemplate("Último ", "lastPlace")}
                 <h5>Vencedor</h5>
                 <p>${store.ongoingRound?.firstPlace?.song?.title}</p>
                 <p>${store.ongoingRound?.firstPlace?.submitter?.displayName}</p>
@@ -252,6 +254,14 @@ export default class ResultsPage extends observer(LitElement) {
                 </section>
             </section>
         </default-background>
+    `;
+  }
+
+  playerEntryTemplate(title, fieldName) {
+    return html`
+      <h5>${title}</h5>
+      <p>${store.ongoingRound?.[fieldName]?.song?.title}</p>
+      <p>${store.ongoingRound?.[fieldName]?.submitter?.displayName}</p>
     `;
   }
 }

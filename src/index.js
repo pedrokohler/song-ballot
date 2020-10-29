@@ -27,11 +27,11 @@ customElements.whenDefined("router-slot").then(async () => {
       component: () => import("./pages/vote-page"),
       guards: [sessionGuard],
     },
-    // {
-    //   path: "results",
-    //   component: () => import("./pages/results-page"),
-    //   guards: [sessionGuard],
-    // },
+    {
+      path: "results",
+      component: () => import("./pages/results-page"),
+      guards: [sessionGuard],
+    },
     {
       path: "logout",
       component: () => import("./pages/logout-page"),
