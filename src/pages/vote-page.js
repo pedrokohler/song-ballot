@@ -290,10 +290,10 @@ export default class VotePage extends SuperClass {
   async firstUpdated(changedProperties) {
     await super.firstUpdated(changedProperties);
 
-    const errors = this.checkForErrors(this.getCheckFunctionsMap());
     const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
-
     this.setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt });
+
+    const errors = this.checkForErrors(this.getCheckFunctionsMap());
     if (errors.length) {
       this.onInitialChecksFailed(errors);
     } else {
