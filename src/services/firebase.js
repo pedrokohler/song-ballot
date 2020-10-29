@@ -46,6 +46,11 @@ export const DateConverter = {
 
 export const fetchYoutubeVideoTitle = (videoId) => {
   const getYoutubeTitle = firebase.functions().httpsCallable("getYoutubeTitle");
-  return getYoutubeTitle({ videoId })
-    .then((response) => response.data);
+  return getYoutubeTitle({ videoId }).then((response) => {
+    const { error, title } = response.data;
+    if (error) {
+      throw new Error(error);
+    }
+    return title;
+  });
 };
