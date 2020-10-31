@@ -1,14 +1,24 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
+const {
+  now: firebaseNow,
+  getGroupRef,
+  getUserRef,
+  getRoundRef,
+  getEvaluationsRef,
+} = require("./helpers/firebase");
+const {
+  getDayOfNextWeekWithTime,
+} = require("./helpers/time");
 
 admin.initializeApp();
 
-exports.initializeUser = functions.auth.user().onCreate((user) => {
+exports.initializeUser = functions.auth.user().onCreate(async (user) => {
   const {
     uid: id, displayName, email, photoURL
   } = user;
-  admin.firestore().collection("users").doc(id).set({
+  await getUserRef(id).set({
     id,
     displayName,
     email,
@@ -22,53 +32,189 @@ exports.getYoutubeTitle = functions.https.onCall((data, context) => {
   if (uid) {
     const { videoId } = data;
     const apiKey = functions.config().youtube.key;
-    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&fields=items(id%2Csnippet)&key=${apiKey}`;
+    const url = getYoutubeApiUrl(videoId, apiKey);
 
-    return new Promise((resolve, reject) => {
-      axios.get(url).then((response) => {
-        const { title } = response.data.items[0].snippet;
-        return resolve(title);
-      }).catch(e => {
-        console.log(e.message);
-        return reject(e);
+    return axios.get(url).then((response) => {
+        const hasFoundSong = !!response.data.items[0];
+
+        if(hasFoundSong){
+          const { title } = response.data.items[0].snippet;
+          return { title };
+        }
+
+        return { error: "Song not found" };
       });
-    })
   }
   return { error: "Unauthenticated user" }
 });
 
-exports.controlSubmissionLimits = functions.firestore
-.document("groups/{groupId}/submissions/{submissionId}")
-.onCreate(async (snapshot, context) => {
-  const { groupId } = context.params;
-  const { round: ongoingRound } = snapshot.data();
+exports.controlRoundLifecycle = functions.firestore
+  .document("groups/{groupId}/rounds/{roundId}")
+  .onUpdate(async (change, context) => {
+    const { groupId, roundId } = context.params;
+    const { voteCount, submissions } = change.after.data();
+    const {
+      voteCount: oldVoteCount,
+      submissions: oldSubmissions,
+    } = change.before.data();
 
-  const roundRef = admin.firestore()
-  .collection("groups")
-  .doc(groupId)
-  .collection("rounds")
-  .doc(ongoingRound);
+    if(oldVoteCount !== voteCount){
+      await handleNewVote({
+        groupId,
+        roundId,
+        round: change.after.data(),
+      });
+      return;
+    }
 
-  const round = await roundRef.get();
+    if(oldSubmissions.length !== submissions.length){
+      await handleNewSubmission({
+        groupId,
+        roundId,
+        round: change.after.data(),
+      });
+      return;
+    }
+  });
 
-  const { users, lastWinner } = round.data();
-  const usersQuantity = users.length;
 
-  const submissions = await admin.firestore()
-  .collection("groups")
-  .doc(groupId)
-  .collection("submissions")
-  .where("round", "==", ongoingRound)
+
+const getYoutubeApiUrl = (videoId, apiKey) => "https://www.googleapis.com/youtube/v3/videos"
+  + `?part=snippet&id=${videoId}&fields=items(id%2Csnippet)&key=${apiKey}`;
+
+const handleNewVote = async ({
+  groupId,
+  roundId,
+  round
+}) => {
+  const { users, voteCount } = round;
+  const everyoneVoted = users.length === voteCount
+
+  if(everyoneVoted) {
+    await finishRound(groupId, roundId);
+  }
+}
+
+const finishRound = async (groupId, roundId) => {
+  const lastWinner = await computeRoundWinner(groupId, roundId);
+  await updateRoundEvaluationsEndAt(groupId, roundId);
+  await startNewRound(groupId, lastWinner);
+}
+
+const updateRoundEvaluationsEndAt = async (groupId, roundId) => {
+  const now = firebaseNow();
+  const roundRef = getRoundRef(groupId, roundId);
+  await roundRef.update({ evaluationsEndAt: now });
+}
+
+const computeRoundWinner = async (groupId, roundId) => {
+  const evaluations = await getEvaluationsRef(groupId)
+  .where("round", "==", roundId)
   .get();
 
-  const submissionsQuantity = submissions.size;
+  const results = evaluations.docs.reduce((results, doc) => {
+    const ev = doc.data();
+    const songId = ev.song;
+    if (results[songId]) {
+      return {
+        ...results,
+        [songId]: updateVoteCounting(results[songId], ev)
+      };
+    }
+    return {
+      ...results,
+      [songId]: initializeVoteCounting(ev)
+    }
+  }, {});
+
+  const lastWinner = Object.values(results).sort((a, b) => b.finalScore - a.finalScore)[0];
+  return lastWinner.user;
+}
+
+const initializeVoteCounting = (evaluation) => {
+  const penalty = evaluation.ratedFamous ? -1: 0;
+  return {
+    user: evaluation.evaluatee,
+    ratedFamous: evaluation.ratedFamous ? 1 : 0,
+    penalty: penalty,
+    points: evaluation.score,
+    timesVoted: 1,
+    finalScore: evaluation.score + penalty,
+  }
+}
+
+const updateVoteCounting = (lastState, evaluation) => {
+  const points = lastState.points + evaluation.score;
+  const ratedFamous = lastState.ratedFamous + evaluation.ratedFamous ? 1 : 0;
+  const timesVoted = lastState.timesVoted + 1;
+  const penalty = calculatePenalty({ ratedFamous, timesVoted });
+
+  return {
+    ...lastState,
+    points,
+    ratedFamous,
+    timesVoted,
+    penalty,
+    finalScore: calculateFinalScore({ points, timesVoted, penalty }),
+  }
+}
+
+const calculateFinalScore = ({ points, timesVoted, penalty }) => {
+  return Math.round((points / timesVoted + Number.EPSILON) * 100) / 100 + penalty;
+}
+
+const calculatePenalty = ({ ratedFamous, timesVoted }) => {
+  return ratedFamous / timesVoted > 0.5 ? -1 : 0;
+}
+
+
+const startNewRound = async (groupId, lastWinner) => {
+  const now = firebaseNow();
+  const groupRef = getGroupRef(groupId);
+
+  const group = await groupRef.get();
+  const { users } = group.data();
+
+  const round = await groupRef.collection("rounds").add({
+    submissionsStartAt: now,
+    submissionsEndAt: getDayOfNextWeekWithTime("tuesday", 15, 0, 0),
+    evaluationsStartAt: getDayOfNextWeekWithTime("tuesday", 15, 0, 1),
+    evaluationsEndAt: getDayOfNextWeekWithTime("sunday", 23, 0, 0),
+    submissions: [],
+    evaluations: [],
+    songs: [],
+    users: users || [],
+    lastWinner,
+    voteCount: 0
+  });
+
+  await groupRef.update({
+    ongoingRound: round.id,
+  });
+}
+
+const handleNewSubmission = async ({
+  groupId,
+  roundId,
+  round
+}) => {
+  const { users, lastWinner, submissions } = round;
+  const usersQuantity = users.length;
+
+  const submissionsQuantity = submissions.length;
   const submissionsTarget = usersQuantity + (lastWinner ? 1 : 0);
 
   if(submissionsTarget === submissionsQuantity) {
-    const now = admin.firestore.FieldValue.serverTimestamp();
-    await roundRef.update({ submissionsEndAt: now, evaluationsStartAt: now });
+    await startRoundEvaluationPeriod(groupId, roundId);
   }
-});
+}
+
+const startRoundEvaluationPeriod = async (groupId, roundId) => {
+  const now = firebaseNow();
+  const roundRef = getRoundRef(groupId, roundId);
+  await roundRef.update({ submissionsEndAt: now, evaluationsStartAt: now });
+}
+
 
 // exports.roundCronJob = functions.pubsub
 // .schedule('every sunday 20:01')
@@ -84,120 +230,5 @@ exports.controlSubmissionLimits = functions.firestore
 //       .collection('rounds')
 //       .doc(ongoingRound)
 //       .get();
-    
 //   })
 // })
-
-
-exports.controlEvaluationLimits = functions.firestore
-.document("groups/{groupId}/rounds/{roundId}")
-.onWrite(async (change, context) => {
-  const { groupId, roundId: ongoingRound } = context.params;
-  const { voteCount } = change.after.data();
-
-  if(change.before.data().voteCount === voteCount){
-    return;
-  }
-
-  const roundRef = admin.firestore()
-  .collection("groups")
-  .doc(groupId)
-  .collection("rounds")
-  .doc(ongoingRound);
-
-  const round = await roundRef.get();
-
-  const { users } = round.data();
-
-  const everyoneVoted = users.length === voteCount
-
-  if(everyoneVoted) {
-    const now = admin.firestore.FieldValue.serverTimestamp();
-    await roundRef.update({ evaluationsEndAt: now });
-    const lastWinner = await getRoundWinner(groupId, ongoingRound);
-    await startNewRound(groupId, lastWinner);
-  }
-});
-
-const getRoundWinner = async (groupId, roundId) => {
-  const evaluations = await admin.firestore()
-  .collection("groups")
-  .doc(groupId)
-  .collection("evaluations")
-  .where("round", "==", roundId)
-  .get();
-
-  const results = evaluations.docs.reduce((results, doc) => {
-    const ev = doc.data();
-    const songId = ev.song;
-    if (results[songId]) {
-      results[songId].points += ev.score;
-      results[songId].votes.push(ev.score);
-      results[songId].ratedFamous += ev.ratedFamous ? 1 : 0;
-      results[songId].timesVoted++;
-      results[songId].penalty = results[songId].ratedFamous / results[songId].timesVoted > 0.5 ? -1 : 0;
-      results[songId].finalScore = Math.round(
-          (results[songId].points / results[songId].timesVoted + Number.EPSILON) * 100
-        ) / 100 + results[songId].penalty;
-    } else {
-      const penalty = ev.ratedFamous ? -1: 0;
-      results[songId] = {
-        user: ev.evaluatee,
-        video: `https://youtube.com/watch?v=${songId}`,
-        votes: [ev.score],
-        ratedFamous: ev.ratedFamous ? 1 : 0,
-        penalty: penalty,
-        points: ev.score + penalty,
-        timesVoted: 1,
-        finalScore: ev.score,
-      };
-    }
-    return results;
-  }, {});
-
-  const lastWinner = Object.values(results).sort((a, b) => b.finalScore - a.finalScore)[0];
-  return lastWinner.user;
-}
-
-
-const startNewRound = async (groupId, lastWinner) => {
-  const now = admin.firestore.FieldValue.serverTimestamp();
-  const groupRef = admin.firestore()
-  .collection("groups")
-  .doc(groupId);
-
-  const group = await groupRef.get();
-
-  const { users } = group.data();
-
-  const round = await groupRef.collection("rounds").add({
-    submissionsStartAt: now,
-    submissionsEndAt: getDayOfNextWeekWithTime("tuesday", 15, 0, 0),
-    evaluationsStartAt: getDayOfNextWeekWithTime("tuesday", 15, 0, 1),
-    evaluationsEndAt: getDayOfNextWeekWithTime("sunday", 23, 0, 0),
-    users: users || [],
-    lastWinner,
-    voteCount: 0
-  });
-
-  await groupRef.update({
-    ongoingRound: round.id,
-  });
-}
-
-const getDayOfNextWeekWithTime = (dayName, hours, minutes, seconds) => {
-  const nextSunday = getNextDayOfWeek("sunday", false);
-  const nextDay = getNextDayOfWeek(dayName, true, nextSunday);
-  nextDay.setHours(hours, minutes, seconds);
-  return admin.firestore.Timestamp.fromDate(nextDay);
-}
-
-const getNextDayOfWeek = (dayName, excludeToday = true, refDate = new Date()) => {
-  const dayOfWeek = ["sun","mon","tue","wed","thu","fri","sat"]
-                    .indexOf(dayName.slice(0,3).toLowerCase());
-  if (dayOfWeek < 0) return null;
-  refDate.setHours(0,0,0,0);
-  refDate.setDate(refDate.getDate() + !!excludeToday +
-                  (dayOfWeek + 7 - refDate.getDay() - !!excludeToday) % 7);
-  return refDate;
-}

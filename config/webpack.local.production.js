@@ -1,3 +1,4 @@
+const Dotenv = require("dotenv-webpack");
 const webpack = require("webpack");
 const merge = require("webpack-merge");
 const paths = require("./paths");
@@ -39,5 +40,6 @@ module.exports = merge(common, {
      * Only update what has changed.
      */
     new webpack.HotModuleReplacementPlugin(),
+    new Dotenv(),
   ],
 });

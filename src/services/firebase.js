@@ -1,33 +1,16 @@
 import firebase from "firebase";
 
-let firebaseConfig;
-
-const DEV_ENVIRONMENT = process.env.NODE_ENV === "development";
-
-// @ todo refactor
-if (DEV_ENVIRONMENT) {
-  firebaseConfig = {
-    apiKey: "AIzaSyAl8D13_-_lvSWb4680AUCh9bvLjQI4o2I",
-    authDomain: "song-ballot-dev.firebaseapp.com",
-    databaseURL: "https://song-ballot-dev.firebaseio.com",
-    projectId: "song-ballot-dev",
-    storageBucket: "song-ballot-dev.appspot.com",
-    // messagingSenderId: '605648762660',
-    appId: "1:605648762660:web:551ffe5aeda24b94fd25b1",
-  };
-} else {
-  firebaseConfig = {
-    apiKey: "AIzaSyAOY3k262Ehu_BVw9NXPragSxLTwrihQgE",
-    authDomain: "song-ballot-95754.firebaseapp.com",
-    databaseURL: "https://song-ballot-95754.firebaseio.com",
-    projectId: "song-ballot-95754",
-    storageBucket: "song-ballot-95754.appspot.com",
-    // messagingSenderId: '474008793798',
-    appId: "1:474008793798:web:039994ff043b95de4fddc7",
-  };
-}
+const firebaseConfig = {
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.FIREBASE_DATABASE_URL,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  appId: process.env.FIREBASE_APP_ID,
+};
 
 firebase.initializeApp(firebaseConfig);
+
 // @todo remove this for real app
 window.firebase = firebase;
 
@@ -63,6 +46,11 @@ export const DateConverter = {
 
 export const fetchYoutubeVideoTitle = (videoId) => {
   const getYoutubeTitle = firebase.functions().httpsCallable("getYoutubeTitle");
-  return getYoutubeTitle({ videoId })
-    .then((response) => response.data);
+  return getYoutubeTitle({ videoId }).then((response) => {
+    const { error, title } = response.data;
+    if (error) {
+      throw new Error(error);
+    }
+    return title;
+  });
 };

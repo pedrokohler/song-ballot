@@ -45,12 +45,23 @@ git checkout master
 git worktree add dist gh-pages
 ```
 
-If your source controll changes are full of wrong updates updates, just restart your IDE and it'll work fine.
+If your source control changes are full of wrong updates, just restart your IDE and it'll work fine.
 
 To deploy firebase functions, first add the youtube.key variable
 ```
 cd ./functions
 firebase functions:config:set youtube.key="YOUR_KEY"
+```
+
+Before starting the app you should create your .env and .env.development files in the root folder, filling it up with the following keys
+
+```
+FIREBASE_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_DATABASE_URL=
+FIREBASE_PROJECT_ID=
+FIREBASE_STORAGE_BUCKET=
+FIREBASE_APP_ID=
 ```
 
 ## Usage
