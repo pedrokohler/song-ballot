@@ -197,9 +197,9 @@ export default class SendSongPage extends SuperClass {
     this.setSongLimit();
     this.setSongsSent();
 
-    const errors = this.checkForErrors(this.getCheckFunctionsMap());
-    if (errors.length) {
-      this.onInitialChecksFailed(errors);
+    const errorCode = this.checkForErrors(this.getCheckFunctionsMap());
+    if (errorCode) {
+      this.safeOpenAlertModal(errorCode);
     }
 
     this.isLoading = false;
@@ -217,21 +217,17 @@ export default class SendSongPage extends SuperClass {
   }
 
   checkForErrors(checkFunctionsMap) {
-    const errors = Array
+    const [, errorCode] = Array
       .from(checkFunctionsMap.entries())
-      .map(([check, error]) => (check() ? error : null))
-      .filter((error) => error !== null);
-
-    return errors;
-  }
-
-  onInitialChecksFailed(failedChecks) {
-    this.safeOpenAlertModal(failedChecks?.[0]);
+      .find(([check]) => check() === true)
+      || [];
+    return errorCode;
   }
 
   setDateStrings(submissionsStartAt, submissionsEndAt) {
     this.startDateString = submissionsStartAt.toLocaleDateString();
-    this.endTimeString = submissionsEndAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    this.endTimeString = submissionsEndAt.toLocaleTimeString(undefined,
+      { hour: "2-digit", minute: "2-digit" });
     this.endWeekdayString = submissionsEndAt.toLocaleString(undefined, { weekday: "long" });
   }
 

@@ -184,8 +184,6 @@ export default class VotePage extends SuperClass {
     this.roundStartDate = "";
     this.endTime = "";
     this.endWeekday = "";
-
-    this.submissionIndex = 0;
   }
 
   render() {
@@ -209,15 +207,13 @@ export default class VotePage extends SuperClass {
   }
 
   videoTemplate() {
-    const currentSubmission = this.submissions?.[this.submissionIndex];
-
-    if (!currentSubmission) {
+    if (!this.currentSubmission) {
       return html``;
     }
 
     return html`
-        <h4 class="song-title">${currentSubmission.song.title}</h4>
-        <iframe src=${currentSubmission.song.url} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <h4 class="song-title">${this.currentSubmission.song.title}</h4>
+        <iframe src=${this.currentSubmission.song.url} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         <input
             type="number" max="10" min="1"
             @input=${this.handleScoreInput}
@@ -264,8 +260,8 @@ export default class VotePage extends SuperClass {
     return html`
       ${this.submissions.map((sub) => html`
         <label>${sub.song.title}</label>
-        <label>Nota ${window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-score`) || "inválida"}</label>
-        <label>${window.localStorage.getItem(`${sub.id}-${store.currentUser.id}-is-famous`) === "true" ? "Famosa" : ""}</label>
+        <label>Nota ${this.getScoreFromLocalStorage(sub.id) || "inválida"}</label>
+        <label>${this.getIsFamousFromLocalStorage(sub.id) === "true" ? "Famosa" : ""}</label>
         <hr/>
       `)}
       <section class="navigation-section">
@@ -293,9 +289,9 @@ export default class VotePage extends SuperClass {
     const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
     this.setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt });
 
-    const errors = this.checkForErrors(this.getCheckFunctionsMap());
-    if (errors.length) {
-      this.onInitialChecksFailed(errors);
+    const errorCode = this.checkForErrors(this.getCheckFunctionsMap());
+    if (errorCode) {
+      this.safeOpenAlertModal(errorCode);
     } else {
       this.onInitialChecksPassed();
     }
@@ -305,11 +301,7 @@ export default class VotePage extends SuperClass {
 
   onInitialChecksPassed() {
     this.setSubmissions();
-    this.refreshScreenSubmissionEvaluation();
-  }
-
-  onInitialChecksFailed(failedChecks) {
-    this.safeOpenAlertModal(failedChecks?.[0]);
+    this.submissionIndex = 0;
   }
 
   getCheckFunctionsMap() {
@@ -332,12 +324,11 @@ export default class VotePage extends SuperClass {
   }
 
   checkForErrors(checkFunctionsMap) {
-    const errors = Array
+    const [, errorCode] = Array
       .from(checkFunctionsMap.entries())
-      .map(([check, error]) => (check() ? error : null))
-      .filter((error) => error !== null);
-
-    return errors;
+      .find(([check]) => check() === true)
+      || [];
+    return errorCode;
   }
 
   setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt }) {
@@ -380,7 +371,7 @@ export default class VotePage extends SuperClass {
   }
 
   refreshScreenSubmissionEvaluation() {
-    const { id } = this.submissions?.[this.submissionIndex];
+    const { id } = this.submissions?.[this.submissionIndex] || {};
     this.score = this.getScore(id);
     this.isFamous = this.getIsFamous(id);
   }
@@ -396,23 +387,26 @@ export default class VotePage extends SuperClass {
     return value || "";
   }
 
+  getScoreLocalStorageKey(id) {
+    return `${id}-${store.currentUser.id}-score`;
+  }
+
+  getIsFamousLocalStorageKey(id) {
+    return `${id}-${store.currentUser.id}-is-famous`;
+  }
+
   getScoreFromLocalStorage(id) {
-    const value = window.localStorage
-      .getItem(`${id}-${store.currentUser.id}-score`);
+    const value = window.localStorage.getItem(this.getScoreLocalStorageKey(id));
     return Number(value);
   }
 
   getIsFamous(id) {
     const value = this.getIsFamousFromLocalStorage(id);
-    if (value === "true") {
-      return true;
-    }
-    return false;
+    return value === "true";
   }
 
   getIsFamousFromLocalStorage(id) {
-    const value = window.localStorage
-      .getItem(`${id}-${store.currentUser.id}-is-famous`);
+    const value = window.localStorage.getItem(this.getIsFamousLocalStorageKey(id));
     return value;
   }
 
@@ -424,9 +418,7 @@ export default class VotePage extends SuperClass {
   }
 
   setCurrentIsFamousInLocalStorage(value) {
-    const currentSubmission = this.submissions[this.submissionIndex];
-    window.localStorage
-      .setItem(`${currentSubmission.id}-${store.currentUser.id}-is-famous`, value);
+    window.localStorage.setItem(this.getIsFamousLocalStorageKey(this.currentSubmission.id), value);
   }
 
   setCurrentIsFamousInMemory(value) {
@@ -443,10 +435,7 @@ export default class VotePage extends SuperClass {
   }
 
   setCurrentScoreInLocalStorage(value) {
-    const currentSubmission = this.submissions[this.submissionIndex];
-
-    window.localStorage
-      .setItem(`${currentSubmission.id}-${store.currentUser.id}-score`, value);
+    window.localStorage.setItem(this.getScoreLocalStorageKey(this.currentSubmission.id), value);
   }
 
   setCurrentScoreInInputField(inputEvent, value) {
@@ -458,11 +447,9 @@ export default class VotePage extends SuperClass {
   }
 
   formatScoreValue(value) {
-    if (this.isScoreInputAllowed(value)) {
-      return value;
-    }
-    const formattedValue = this.adjustScoreValue(value);
-    return formattedValue;
+    return this.isScoreInputAllowed(value)
+      ? value
+      : this.adjustScoreValue(value);
   }
 
   adjustScoreValue(value) {
@@ -663,8 +650,8 @@ export default class VotePage extends SuperClass {
 
   runPostTransactionCleanup() {
     this.submissions.forEach((sub) => {
-      window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-score`);
-      window.localStorage.removeItem(`${sub.id}-${store.currentUser.id}-is-famous`);
+      window.localStorage.removeItem(this.getScoreLocalStorageKey(sub.id));
+      window.localStorage.removeItem(this.getIsFamousLocalStorageKey(sub.id));
     });
   }
 
@@ -688,6 +675,10 @@ export default class VotePage extends SuperClass {
 
   get groupRef() {
     return db.collection("groups").doc(store.currentGroup);
+  }
+
+  get currentSubmission() {
+    return this.submissions?.[this.submissionIndex];
   }
 }
 
