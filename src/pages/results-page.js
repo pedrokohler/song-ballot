@@ -9,9 +9,9 @@ import forwardArrows from "../images/forward-arrows.png";
 import backwardArrows from "../images/backward-arrows.png";
 import { store } from "../store";
 import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
-import VoteModalDisplayableMixin from "./mixins/modal-displayable-mixins/vote-modal-displayable-mixin";
+import ResultsModalDisplayableMixin from "./mixins/modal-displayable-mixins/results-modal-displayable-mixin";
 
-const SuperClass = VoteModalDisplayableMixin(
+const SuperClass = ResultsModalDisplayableMixin(
   OngoingRoundDependableMixin(
     LitElement,
   ),
@@ -137,6 +137,14 @@ export default class ResultsPage extends SuperClass {
     `;
   }
 
+  constructor() {
+    super();
+    this.isLoading = true;
+    this.submissionIndex = 0;
+    this.startDate = "";
+    this.hasPlayerVotedThisRound = false;
+  }
+
   static get properties() {
     return {
       isLoading: {
@@ -149,6 +157,116 @@ export default class ResultsPage extends SuperClass {
         type: Boolean,
       },
     };
+  }
+
+  render() {
+    if (this.isLoading) {
+      return html`
+        <paper-progress class="blue" indeterminate></paper-progress>
+      `;
+    }
+
+    return html`
+        <default-background>
+            <section class="shell">
+                <h3>Resultado</h3>
+                <h4>Semana ${this.startDate}</h4>
+                ${this.roundOverViewTemplate()}
+            </section>
+            <section class="shell">
+                <h3>Pontuação</h3>
+                ${this.submissionOverviewTemplate()}
+                ${this.submissionNavigationSectionTemplate()}
+            </section>
+        </default-background>
+    `;
+  }
+
+  submissionNavigationSectionTemplate() {
+    return html`
+      <section class="navigation-section">
+          <button
+              ?disabled=${!this.canSeeCurrentRoundResults || this.submissionIndex <= 0}
+              class="navigation-btn"
+              @click=${() => { this.submissionIndex -= 1; }}
+          >
+              <img src=${backwardArrows} alt="ir para música anterior"/>
+              <span>anterior</span>
+          </button>
+          <button
+              ?disabled=${!this.canSeeCurrentRoundResults
+                || this.submissionIndex >= this.submissions?.length - 1}
+              class="navigation-btn"
+              @click=${() => { this.submissionIndex += 1; }}
+          >
+              <span>próxima</span>
+              <img src=${forwardArrows} alt="ir para próxima música"/>
+          </button>
+      </section>
+    `;
+  }
+
+  roundOverViewTemplate() {
+    return this.canSeeCurrentRoundResults
+      ? html`
+        ${this.playerRankingOverview()}
+      `
+      : html`
+        <blurred-component>
+          ${this.playerRankingOverview()}
+        </blurred-component>
+      `;
+  }
+
+  playerRankingOverview() {
+    return html`
+      ${this.playerRankingTemplate("Vencedor", "firstPlace")}
+      ${this.playerRankingTemplate("Segundo colocado", "secondPlace")}
+      ${this.playerRankingTemplate("Último ", "lastPlace")}
+    `;
+  }
+
+  playerRankingTemplate(title, fieldName) {
+    return html`
+      <h5>${title}</h5>
+      <p>${store.ongoingRound?.[fieldName]?.song?.title}</p>
+      <p>${store.ongoingRound?.[fieldName]?.submitter?.displayName}</p>
+    `;
+  }
+
+  submissionOverviewTemplate() {
+    return this.canSeeCurrentRoundResults
+      ? html`
+        ${this.submissionStatusTemplate()}
+      `
+      : html`
+        <blurred-component>
+          ${this.submissionStatusTemplate()}
+        </blurred-component>
+      `;
+  }
+
+  submissionStatusTemplate() {
+    return html`
+      <h4 class="displayName">${this.currentSubmission?.submitter?.displayName}</h4>
+      <p>${this.currentSubmission?.song?.title}</p>
+      <h4>Nota</h4>
+      <p>${this.currentSubmission?.points}</p>
+      <h4>Pontos</h4>
+      <p>${this.currentSubmission?.total}</p>
+      <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Pontuação</th>
+              <th>Famosa?</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${this.currentSubmission?.evaluations?.map(this.tableRowTemplate)}
+          </tbody>
+      </table>
+    `;
   }
 
   tableRowTemplate(ev) {
@@ -169,13 +287,6 @@ export default class ResultsPage extends SuperClass {
           `;
   }
 
-  constructor() {
-    super();
-    this.isLoading = true;
-    this.submissionIndex = 0;
-    this.startDate = "";
-  }
-
   async firstUpdated(changedProperties) {
     try {
       await super.firstUpdated(changedProperties);
@@ -184,7 +295,9 @@ export default class ResultsPage extends SuperClass {
         .filter((ev) => ev.evaluator.id === store.currentUser.id);
 
       if (!playerVotes.length) {
-        throw new Error("Você só poderá ver os resultados após votar.");
+        this.safeOpenAlertModal(this.alertCodes.HAS_NOT_VOTED);
+      } else {
+        this.hasPlayerVotedThisRound = true;
       }
 
       this.submissions = Array.from(store.ongoingRound?.submissions?.values());
@@ -200,78 +313,11 @@ export default class ResultsPage extends SuperClass {
   }
 
   get currentSubmission() {
-    return this.submissions?.[this.submissionIndex || 0];
+    return this.submissions?.[this.submissionIndex];
   }
 
-  render() {
-    if (this.isLoading) {
-      return html`
-        <paper-progress class="blue" indeterminate></paper-progress>
-      `;
-    }
-
-    return html`
-        <default-background>
-            <section class="shell">
-                <h3>Resultado</h3>
-                <h4>Semana ${this.startDate}</h4>
-                <blurred-component ?blurred=${true}>
-                  ${this.playerRankingTemplate("Vencedor", "firstPlace")}
-                  ${this.playerRankingTemplate("Segundo colocado", "secondPlace")}
-                  ${this.playerRankingTemplate("Último ", "lastPlace")}
-                </blurred-component>
-            </section>
-            <section class="shell">
-                <h3>Pontuação</h3>
-                <blurred-component ?blurred=${true}>
-                  <h4 class="displayName">${this.currentSubmission?.submitter?.displayName}</h4>
-                  <p>${this.currentSubmission?.song?.title}</p>
-                  <h4>Nota</h4>
-                  <p>${this.currentSubmission?.points}</p>
-                  <h4>Pontos</h4>
-                  <p>${this.currentSubmission?.total}</p>
-                  <table>
-                      <thead>
-                        <tr>
-                          <th>Nome</th>
-                          <th>Pontuação</th>
-                          <th>Famosa?</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${this.currentSubmission?.evaluations?.map(this.tableRowTemplate)}
-                      </tbody>
-                  </table>
-                </blurred-component>
-                <section class="navigation-section">
-                    <button
-                        ?disabled=${this.submissionIndex <= 0}
-                        class="navigation-btn"
-                        @click=${() => { this.submissionIndex -= 1; }}
-                    >
-                        <img src=${backwardArrows} alt="ir para música anterior"/>
-                        <span>anterior</span>
-                    </button>
-                    <button
-                        ?disabled=${this.submissionIndex >= this.submissions?.length - 1}
-                        class="navigation-btn"
-                        @click=${() => { this.submissionIndex += 1; }}
-                    >
-                        <span>próxima</span>
-                        <img src=${forwardArrows} alt="ir para próxima música"/>
-                    </button>
-                </section>
-            </section>
-        </default-background>
-    `;
-  }
-
-  playerRankingTemplate(title, fieldName) {
-    return html`
-      <h5>${title}</h5>
-      <p>${store.ongoingRound?.[fieldName]?.song?.title}</p>
-      <p>${store.ongoingRound?.[fieldName]?.submitter?.displayName}</p>
-    `;
+  get canSeeCurrentRoundResults() {
+    return this.hasPlayerVotedThisRound || this.currentRound.id !== store.ongoingRound.id;
   }
 }
 

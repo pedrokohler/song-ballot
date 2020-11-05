@@ -1,16 +1,6 @@
 import { LitElement, html, css } from "lit-element";
 
 export default class BlurredComponent extends LitElement {
-  static get properties() {
-    return {
-      blurred: {
-        type: Boolean,
-        attribute: true,
-        reflect: true,
-      },
-    };
-  }
-
   static get styles() {
     return css`
         .blurred {
@@ -23,28 +13,17 @@ export default class BlurredComponent extends LitElement {
 
   render() {
     return html`
-            <slot class="${this.blurred ? "blurred" : ""}"></slot>
+            <slot class="blurred"></slot>
         `;
   }
 
   firstUpdated(changedProperties) {
     super.firstUpdated(changedProperties);
-
-    if (this.blurred) {
-      this.handleBlur(true);
-    }
+    this.scrambleText();
   }
 
-  attributeChangedCallback(name, oldVal, newVal) {
-    const alreadyRendered = !!this.shadowRoot.querySelector("slot");
-    if (name === "blurred" && alreadyRendered) {
-      this.handleBlur(newVal === "");
-    }
-    super.attributeChangedCallback(name, oldVal, newVal);
-  }
-
-  handleBlur(shouldBlur) {
-    const processText = shouldBlur ? this.scrambleText : this.unscrambleText;
+  scrambleText() {
+    const processText = (text) => btoa(text);
     this.updateText(processText);
   }
 
@@ -76,14 +55,6 @@ export default class BlurredComponent extends LitElement {
 
     leaves.forEach(this.processLeafText(processText));
     subtrees.forEach(this.processSubtreeText(processText));
-  }
-
-  scrambleText(text) {
-    return btoa(text);
-  }
-
-  unscrambleText(text) {
-    return atob(text);
   }
 }
 
