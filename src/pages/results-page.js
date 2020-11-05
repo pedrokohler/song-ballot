@@ -3,6 +3,8 @@ import "@polymer/paper-progress/paper-progress";
 
 import "../components/default-background";
 import "../components/alert-modal";
+import "../components/blurred-component";
+
 import forwardArrows from "../images/forward-arrows.png";
 import backwardArrows from "../images/backward-arrows.png";
 import { store } from "../store";
@@ -143,17 +145,26 @@ export default class ResultsPage extends SuperClass {
       submissionIndex: {
         type: Number,
       },
+      hasPlayerVotedThisRound: {
+        type: Boolean,
+      },
     };
   }
 
-  tableTemplate(ev) {
+  tableRowTemplate(ev) {
     const { displayName } = ev.evaluator;
     const { score, ratedFamous } = ev;
     return html`
             <tr>
-              <td>${displayName}</td>
-              <td>${score}</td>
-              <td>${ratedFamous ? "Sim" : "Não"}</td>
+              <td>
+                <span>${displayName}</span>
+              </td>
+              <td>
+                <span>${score}</span>
+              </td>
+              <td>
+                <span>${ratedFamous ? "Sim" : "Não"}</span>
+              </td>
             </tr>
           `;
   }
@@ -181,7 +192,6 @@ export default class ResultsPage extends SuperClass {
       const { submissionsStartAt } = store.ongoingRound;
 
       this.startDate = submissionsStartAt.toLocaleDateString();
-      this.currentSubmission = store.ongoingRound?.firstPlace;
     } catch (e) {
       this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU, e.message);
     }
@@ -205,35 +215,34 @@ export default class ResultsPage extends SuperClass {
             <section class="shell">
                 <h3>Resultado</h3>
                 <h4>Semana ${this.startDate}</h4>
-                ${this.playerEntryTemplate("Vencedor", "firstPlace")}
-                ${this.playerEntryTemplate("Segundo colocado", "secondPlace")}
-                ${this.playerEntryTemplate("Último ", "lastPlace")}
-                <h5>Vencedor</h5>
-                <p>${store.ongoingRound?.firstPlace?.song?.title}</p>
-                <p>${store.ongoingRound?.firstPlace?.submitter?.displayName}</p>
-                <h5>Segundo colocado</h5>
-                <p>${store.ongoingRound?.secondPlace?.song?.title}</p>
-                <p>${store.ongoingRound?.secondPlace?.submitter?.displayName}</p>
-                <h5>Último colocado</h5>
-                <p>${store.ongoingRound?.lastPlace?.song?.title}</p>
-                <p>${store.ongoingRound?.lastPlace?.submitter?.displayName}</p>
+                <blurred-component ?blurred=${true}>
+                  ${this.playerRankingTemplate("Vencedor", "firstPlace")}
+                  ${this.playerRankingTemplate("Segundo colocado", "secondPlace")}
+                  ${this.playerRankingTemplate("Último ", "lastPlace")}
+                </blurred-component>
             </section>
             <section class="shell">
                 <h3>Pontuação</h3>
-                <h4 class="displayName">${this.currentSubmission?.submitter?.displayName}</h4>
-                <p>${this.currentSubmission?.song?.title}</p>
-                <h4>Nota</h4>
-                <p>${this.currentSubmission?.points}</p>
-                <h4>Pontos</h4>
-                <p>${this.currentSubmission?.total}</p>
-                <table>
-                    <tr>
-                      <th>Nome</th>
-                      <th>Pontuação</th>
-                      <th>Famosa?</th>
-                    </tr>
-                    ${this.currentSubmission?.evaluations?.map(this.tableTemplate)}
-                </table>
+                <blurred-component ?blurred=${true}>
+                  <h4 class="displayName">${this.currentSubmission?.submitter?.displayName}</h4>
+                  <p>${this.currentSubmission?.song?.title}</p>
+                  <h4>Nota</h4>
+                  <p>${this.currentSubmission?.points}</p>
+                  <h4>Pontos</h4>
+                  <p>${this.currentSubmission?.total}</p>
+                  <table>
+                      <thead>
+                        <tr>
+                          <th>Nome</th>
+                          <th>Pontuação</th>
+                          <th>Famosa?</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${this.currentSubmission?.evaluations?.map(this.tableRowTemplate)}
+                      </tbody>
+                  </table>
+                </blurred-component>
                 <section class="navigation-section">
                     <button
                         ?disabled=${this.submissionIndex <= 0}
@@ -257,7 +266,7 @@ export default class ResultsPage extends SuperClass {
     `;
   }
 
-  playerEntryTemplate(title, fieldName) {
+  playerRankingTemplate(title, fieldName) {
     return html`
       <h5>${title}</h5>
       <p>${store.ongoingRound?.[fieldName]?.song?.title}</p>
