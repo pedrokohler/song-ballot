@@ -16,22 +16,28 @@ export const Round = types.model({
   submissionsEndAt: types.Date,
   evaluationsStartAt: types.Date,
   evaluationsEndAt: types.Date,
-})
-  .views((self) => ({
-    get playerRanking() {
-      return self.submissions?.slice().sort((a, b) => b.points - a.points);
-    },
-    get firstPlace() {
-      return self.playerRanking?.[0];
-    },
-    get secondPlace() {
-      return self.playerRanking?.[1];
-    },
-    get lastPlace() {
-      const lastIndex = self.submissions?.length - 1;
-      return lastIndex >= 0 && self.playerRanking?.[lastIndex];
-    },
-  }))
+}).postProcessSnapshot((snapshot) => ({
+  // @todo substitute deprecated postProcessSnapshot for snapshotProcessor
+  ...snapshot,
+  submissionsStartAt: new Date(snapshot.submissionsStartAt),
+  submissionsEndAt: new Date(snapshot.submissionsEndAt),
+  evaluationsStartAt: new Date(snapshot.evaluationsStartAt),
+  evaluationsEndAt: new Date(snapshot.evaluationsEndAt),
+})).views((self) => ({
+  get playerRanking() {
+    return self.submissions?.slice().sort((a, b) => b.points - a.points);
+  },
+  get firstPlace() {
+    return self.playerRanking?.[0];
+  },
+  get secondPlace() {
+    return self.playerRanking?.[1];
+  },
+  get lastPlace() {
+    const lastIndex = self.submissions?.length - 1;
+    return lastIndex >= 0 && self.playerRanking?.[lastIndex];
+  },
+}))
   .actions((self) => ({
     addEvaluation(evaluation) {
       if (!self.evaluations.includes(evaluation)) {

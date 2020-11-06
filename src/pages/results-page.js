@@ -10,6 +10,7 @@ import backwardArrows from "../images/backward-arrows.png";
 import { store } from "../store";
 import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
 import ResultsModalDisplayableMixin from "./mixins/modal-displayable-mixins/results-modal-displayable-mixin";
+import { getFirebaseTimestamp } from "../services/firebase";
 
 const SuperClass = ResultsModalDisplayableMixin(
   OngoingRoundDependableMixin(
@@ -94,6 +95,7 @@ export default class ResultsPage extends SuperClass {
             display: flex;
             flex-direction: row;
             justify-content: space-between;
+            margin-top: 1em;
         }
 
         .navigation-btn {
@@ -134,6 +136,30 @@ export default class ResultsPage extends SuperClass {
           width: 100vw;
           --paper-progress-active-color: #FBC303;
         }
+
+        blurred-component {
+          display: inherit;
+          flex-direction: inherit;
+          align-items: inherit;
+          justify-content: inherit;
+          box-sizing: inherit;
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          word-break: break-word;
+        }
+
+        blurred-component a, blurred-component a:visited {
+          text-decoration: inherit;
+          color: inherit;
+          cursor: auto;
+          pointer-events: none;
+        }
+
+        td {
+          text-align: center;
+        }
     `;
   }
 
@@ -141,8 +167,9 @@ export default class ResultsPage extends SuperClass {
     super();
     this.isLoading = true;
     this.submissionIndex = 0;
-    this.startDate = "";
+    this.roundIndex = 0;
     this.hasPlayerVotedThisRound = false;
+    this.maxRoundIndex = Infinity;
   }
 
   static get properties() {
@@ -151,6 +178,12 @@ export default class ResultsPage extends SuperClass {
         type: Boolean,
       },
       submissionIndex: {
+        type: Number,
+      },
+      roundIndex: {
+        type: Number,
+      },
+      maxRoundIndex: {
         type: Number,
       },
       hasPlayerVotedThisRound: {
@@ -172,6 +205,7 @@ export default class ResultsPage extends SuperClass {
                 <h3>Resultado</h3>
                 <h4>Semana ${this.startDate}</h4>
                 ${this.roundOverViewTemplate()}
+                ${this.roundNavigationSectionTemplate()}
             </section>
             <section class="shell">
                 <h3>Pontuação</h3>
@@ -206,6 +240,29 @@ export default class ResultsPage extends SuperClass {
     `;
   }
 
+  roundNavigationSectionTemplate() {
+    return html`
+      <section class="navigation-section">
+          <button
+              ?disabled=${this.roundIndex <= 0}
+              class="navigation-btn"
+              @click=${() => { this.roundIndex -= 1; }}
+          >
+              <img src=${backwardArrows} alt="ir para música anterior"/>
+              <span>anterior</span>
+          </button>
+          <button
+              ?disabled=${this.roundIndex >= this.maxRoundIndex}
+              class="navigation-btn"
+              @click=${this.getNextRound}
+          >
+              <span>próxima</span>
+              <img src=${forwardArrows} alt="ir para próxima música"/>
+          </button>
+      </section>
+    `;
+  }
+
   roundOverViewTemplate() {
     return this.canSeeCurrentRoundResults
       ? html`
@@ -227,10 +284,13 @@ export default class ResultsPage extends SuperClass {
   }
 
   playerRankingTemplate(title, fieldName) {
+    const song = this.currentRound?.[fieldName]?.song;
     return html`
       <h5>${title}</h5>
-      <p>${store.ongoingRound?.[fieldName]?.song?.title}</p>
-      <p>${store.ongoingRound?.[fieldName]?.submitter?.displayName}</p>
+      <a href=${this.getDirectYoutubeUrl(song?.id)} target="_blank">
+        <p>${song?.title}</p>
+      </a>
+      <p>${this.currentRound?.[fieldName]?.submitter?.displayName}</p>
     `;
   }
 
@@ -249,7 +309,9 @@ export default class ResultsPage extends SuperClass {
   submissionStatusTemplate() {
     return html`
       <h4 class="displayName">${this.currentSubmission?.submitter?.displayName}</h4>
-      <p>${this.currentSubmission?.song?.title}</p>
+      <a href=${this.getDirectYoutubeUrl(this.currentSubmission?.song?.id)} target="_blank">
+        <p>${this.currentSubmission?.song?.title}</p>
+      </a>
       <h4>Nota</h4>
       <p>${this.currentSubmission?.points}</p>
       <h4>Pontos</h4>
@@ -270,21 +332,20 @@ export default class ResultsPage extends SuperClass {
   }
 
   tableRowTemplate(ev) {
-    const { displayName } = ev.evaluator;
-    const { score, ratedFamous } = ev;
+    const { score, ratedFamous, evaluator: { displayName } } = ev;
     return html`
-            <tr>
-              <td>
-                <span>${displayName}</span>
-              </td>
-              <td>
-                <span>${score}</span>
-              </td>
-              <td>
-                <span>${ratedFamous ? "Sim" : "Não"}</span>
-              </td>
-            </tr>
-          `;
+      <tr>
+        <td>
+          <span>${displayName}</span>
+        </td>
+        <td>
+          <span>${score}</span>
+        </td>
+        <td>
+          <span>${ratedFamous ? "Sim" : "Não"}</span>
+        </td>
+      </tr>
+    `;
   }
 
   async firstUpdated(changedProperties) {
@@ -301,15 +362,44 @@ export default class ResultsPage extends SuperClass {
       }
 
       this.submissions = Array.from(store.ongoingRound?.submissions?.values());
-
-      const { submissionsStartAt } = store.ongoingRound;
-
-      this.startDate = submissionsStartAt.toLocaleDateString();
     } catch (e) {
       this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU, e.message);
     }
 
     this.isLoading = false;
+  }
+
+  getDirectYoutubeUrl(id) {
+    return `https://youtube.com/watch?v=${id}`;
+  }
+
+  async getNextRound() {
+    const maxRoundIndex = this.rounds.length - 1;
+    if (maxRoundIndex > this.roundIndex) {
+      this.roundIndex += 1;
+      this.submissionIndex = 0;
+      this.submissions = Array.from(this.currentRound?.submissions?.values());
+    } else {
+      await store.fetchNextPaginatedRound(
+        getFirebaseTimestamp(this.currentRound.submissionsStartAt),
+      );
+      const newMaxRoundIndex = this.rounds.length - 1;
+      if (newMaxRoundIndex > this.roundIndex) {
+        this.roundIndex += 1;
+        this.submissionIndex = 0;
+        this.submissions = Array.from(this.currentRound?.submissions?.values());
+        return;
+      }
+      this.maxRoundIndex = newMaxRoundIndex;
+    }
+  }
+
+  get rounds() {
+    return Array.from(store.rounds.values());
+  }
+
+  get currentRound() {
+    return this.rounds?.[this.roundIndex];
   }
 
   get currentSubmission() {
@@ -318,6 +408,11 @@ export default class ResultsPage extends SuperClass {
 
   get canSeeCurrentRoundResults() {
     return this.hasPlayerVotedThisRound || this.currentRound.id !== store.ongoingRound.id;
+  }
+
+  get startDate() {
+    const { submissionsStartAt } = this.currentRound || { submissionsStartAt: new Date() };
+    return submissionsStartAt.toLocaleDateString();
   }
 }
 

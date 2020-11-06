@@ -14,6 +14,8 @@ firebase.initializeApp(firebaseConfig);
 // @todo remove this for real app
 window.firebase = firebase;
 
+export const getFirebaseTimestamp = (date) => firebase.firestore.Timestamp.fromDate(date);
+
 export const db = firebase.firestore();
 
 export const handleGoogleSignIn = (e) => {
@@ -36,7 +38,7 @@ export const DateConverter = {
   toFirestore(data) {
     const newData = Object.keys(data).reduce((obj, key) => {
       if (data[key] instanceof Date) {
-        return { ...obj, [key]: firebase.firestore.Timestamp.fromDate(data[key]) };
+        return { ...obj, [key]: getFirebaseTimestamp(data[key]) };
       }
       return obj;
     }, data);

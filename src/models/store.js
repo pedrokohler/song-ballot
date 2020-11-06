@@ -110,19 +110,45 @@ export const RootStore = types
         .doc(roundId)
         .withConverter(DateConverter);
     },
+    fetchAndLoadRound: flow(function* fetchAndLoadRound(roundId) {
+      const roundDoc = yield self.getRoundRef(roundId).get();
+      const round = { id: roundId, ...roundDoc.data() };
+
+      yield self.loadRound(round);
+    }),
+    fetchNextPaginatedRound: flow(function* fetchPaginatedRound(startAfter) {
+      const roundsSnapshot = yield self
+        .getCurrentGroupRef()
+        .collection("rounds")
+        .orderBy("submissionsStartAt", "desc")
+        .startAfter(startAfter)
+        .limit(1)
+        .withConverter(DateConverter)
+        .get();
+
+      const roundDoc = roundsSnapshot.docs[0];
+
+      if (roundDoc) {
+        const round = { id: roundDoc.id, ...roundDoc.data() };
+
+        yield self.loadRound(round);
+      }
+    }),
+    loadRound: flow(function* loadRound(round) {
+      const { id: roundId } = round;
+
+      self.addRound(round);
+      yield self.loadRoundUsers(round.users);
+      yield self.loadRoundSongs(roundId);
+      yield self.loadRoundSubmissions(roundId);
+      yield self.loadRoundEvaluations(roundId);
+    }),
     getOngoingRound: flow(function* getOngoingRound() {
       const groupDoc = yield self.getCurrentGroupRef().get();
       const { ongoingRound: ongoingRoundId } = groupDoc.data();
 
-      const roundDoc = yield self.getRoundRef(ongoingRoundId).get();
-      const ongoingRound = { id: ongoingRoundId, ...roundDoc.data() };
-
-      self.addRound(ongoingRound);
+      yield self.fetchAndLoadRound(ongoingRoundId);
       self.setOngoingRound(ongoingRoundId);
-      yield self.loadRoundUsers(ongoingRound.users);
-      yield self.loadRoundSongs(ongoingRoundId);
-      yield self.loadRoundSubmissions(ongoingRoundId);
-      yield self.loadRoundEvaluations(ongoingRoundId);
     }),
     setAuthStateChecked(status) {
       self.authStateChecked = status;
