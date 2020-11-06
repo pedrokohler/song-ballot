@@ -159,6 +159,7 @@ export default class ResultsPage extends SuperClass {
 
         td {
           text-align: center;
+          font-weight: 300;
         }
     `;
   }
@@ -170,6 +171,7 @@ export default class ResultsPage extends SuperClass {
     this.roundIndex = 0;
     this.hasPlayerVotedThisRound = false;
     this.maxRoundIndex = Infinity;
+    this.hasOngoingRequest = false;
   }
 
   static get properties() {
@@ -189,6 +191,9 @@ export default class ResultsPage extends SuperClass {
       hasPlayerVotedThisRound: {
         type: Boolean,
       },
+      hasOngoingRequest: {
+        type: Boolean,
+      },
     };
   }
 
@@ -202,13 +207,13 @@ export default class ResultsPage extends SuperClass {
     return html`
         <default-background>
             <section class="shell">
-                <h3>Resultado</h3>
+                <h3>Resultado da rodada</h3>
                 <h4>Semana ${this.startDate}</h4>
                 ${this.roundOverViewTemplate()}
                 ${this.roundNavigationSectionTemplate()}
             </section>
             <section class="shell">
-                <h3>Pontuação</h3>
+                <h3>Pontuação das músicas</h3>
                 ${this.submissionOverviewTemplate()}
                 ${this.submissionNavigationSectionTemplate()}
             </section>
@@ -220,7 +225,7 @@ export default class ResultsPage extends SuperClass {
     return html`
       <section class="navigation-section">
           <button
-              ?disabled=${!this.canSeeCurrentRoundResults || this.submissionIndex <= 0}
+              ?disabled=${!this.canSeeCurrentRoundResults || this.submissionIndex <= 0 || this.hasOngoingRequest}
               class="navigation-btn"
               @click=${() => { this.submissionIndex -= 1; }}
           >
@@ -229,7 +234,7 @@ export default class ResultsPage extends SuperClass {
           </button>
           <button
               ?disabled=${!this.canSeeCurrentRoundResults
-                || this.submissionIndex >= this.submissions?.length - 1}
+                || this.submissionIndex >= this.submissions?.length - 1 || this.hasOngoingRequest}
               class="navigation-btn"
               @click=${() => { this.submissionIndex += 1; }}
           >
@@ -244,15 +249,15 @@ export default class ResultsPage extends SuperClass {
     return html`
       <section class="navigation-section">
           <button
-              ?disabled=${this.roundIndex <= 0}
+              ?disabled=${this.roundIndex <= 0 || this.hasOngoingRequest}
               class="navigation-btn"
-              @click=${() => { this.roundIndex -= 1; }}
+              @click=${this.getPreviousRound}
           >
               <img src=${backwardArrows} alt="ir para música anterior"/>
               <span>anterior</span>
           </button>
           <button
-              ?disabled=${this.roundIndex >= this.maxRoundIndex}
+              ?disabled=${this.roundIndex >= this.maxRoundIndex || this.hasOngoingRequest}
               class="navigation-btn"
               @click=${this.getNextRound}
           >
@@ -335,7 +340,7 @@ export default class ResultsPage extends SuperClass {
     const { score, ratedFamous, evaluator: { displayName } } = ev;
     return html`
       <tr>
-        <td>
+        <td style="text-align: left">
           <span>${displayName}</span>
         </td>
         <td>
@@ -348,6 +353,7 @@ export default class ResultsPage extends SuperClass {
     `;
   }
 
+  // @todo Refactor all code below
   async firstUpdated(changedProperties) {
     try {
       await super.firstUpdated(changedProperties);
@@ -373,7 +379,14 @@ export default class ResultsPage extends SuperClass {
     return `https://youtube.com/watch?v=${id}`;
   }
 
+  getPreviousRound() {
+    this.roundIndex -= 1;
+    this.submissionIndex = 0;
+    this.submissions = Array.from(this.currentRound?.submissions?.values());
+  }
+
   async getNextRound() {
+    this.hasOngoingRequest = true;
     const maxRoundIndex = this.rounds.length - 1;
     if (maxRoundIndex > this.roundIndex) {
       this.roundIndex += 1;
@@ -388,10 +401,12 @@ export default class ResultsPage extends SuperClass {
         this.roundIndex += 1;
         this.submissionIndex = 0;
         this.submissions = Array.from(this.currentRound?.submissions?.values());
-        return;
+      } else {
+        this.maxRoundIndex = newMaxRoundIndex;
+        this.safeOpenAlertModal(this.alertCodes.FIRST_ROUND_REACHED);
       }
-      this.maxRoundIndex = newMaxRoundIndex;
     }
+    this.hasOngoingRequest = false;
   }
 
   get rounds() {

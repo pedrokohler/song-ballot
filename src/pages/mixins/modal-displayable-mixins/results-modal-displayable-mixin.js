@@ -2,6 +2,7 @@ import CustomizableModalDisplayableMixin, { closeModal } from "./customizable-mo
 
 const customizedAlertCodes = {
   HAS_NOT_VOTED: "has-not-voted",
+  FIRST_ROUND_REACHED: "first-round-reached",
 };
 
 export default CustomizableModalDisplayableMixin({
@@ -11,6 +12,13 @@ export default CustomizableModalDisplayableMixin({
       needsErrorMessage: false,
       messageGenerator() {
         return "Você só poderá ver os resultados desta rodada após votar.";
+      },
+      onButtonClicked: closeModal,
+    }],
+    [customizedAlertCodes.FIRST_ROUND_REACHED, {
+      needsErrorMessage: false,
+      messageGenerator() {
+        return "Você já viu todos os resultados disponíveis.";
       },
       onButtonClicked: closeModal,
     }],

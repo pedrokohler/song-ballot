@@ -27,8 +27,11 @@ export const Submission = types
     },
     get points() {
       const penalty = self.isFamous ? 1 : 0;
-      const basePoints = self.numberOfEvaluations ? self.total / self.numberOfEvaluations : 0;
-      return basePoints - penalty;
+      const basePoints = self.numberOfEvaluations
+        ? (self.total / self.numberOfEvaluations + Number.EPSILON)
+        : 0;
+      const roundedPoints = Math.round(100 * basePoints) / 100;
+      return roundedPoints - penalty;
     },
     get isFamous() {
       return self.timesRatedFamous / (self.numberOfEvaluations || 1) > 0.5;
