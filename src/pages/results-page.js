@@ -207,7 +207,7 @@ export default class ResultsPage extends SuperClass {
     return html`
         <default-background>
             <section class="shell">
-                <h3>Resultado${this.currentRound.id === store.ongoingRound.id ? " parcial " : " "}da rodada</h3>
+                <h3>Resultado${this.isOngoingRound ? " parcial " : " "}da rodada</h3>
                 <h4>Semana ${this.startDate}</h4>
                 ${this.roundOverViewTemplate()}
                 ${this.roundNavigationSectionTemplate()}
@@ -225,7 +225,7 @@ export default class ResultsPage extends SuperClass {
     return html`
       <section class="navigation-section">
           <button
-              ?disabled=${!this.canSeeCurrentRoundResults || this.submissionIndex <= 0 || this.hasOngoingRequest}
+              ?disabled=${this.shouldDisablePreviousSubmissionButton()}
               class="navigation-btn"
               @click=${() => { this.submissionIndex -= 1; }}
           >
@@ -233,8 +233,7 @@ export default class ResultsPage extends SuperClass {
               <span>anterior</span>
           </button>
           <button
-              ?disabled=${!this.canSeeCurrentRoundResults
-                || this.submissionIndex >= this.submissions?.length - 1 || this.hasOngoingRequest}
+              ?disabled=${this.shouldDisableNextSubmissionButton()}
               class="navigation-btn"
               @click=${() => { this.submissionIndex += 1; }}
           >
@@ -249,17 +248,17 @@ export default class ResultsPage extends SuperClass {
     return html`
       <section class="navigation-section">
           <button
-              ?disabled=${this.roundIndex <= 0 || this.hasOngoingRequest}
+              ?disabled=${this.shouldDisablePreviousRoundButton()}
               class="navigation-btn"
-              @click=${this.getPreviousRound}
+              @click=${this.onPreviousRoundClick}
           >
               <img src=${backwardArrows} alt="ir para música anterior"/>
               <span>anterior</span>
           </button>
           <button
-              ?disabled=${this.roundIndex >= this.maxRoundIndex || this.hasOngoingRequest}
+              ?disabled=${this.shouldDisableNextRoundButton()}
               class="navigation-btn"
-              @click=${this.getNextRound}
+              @click=${this.onNextRoundClick}
           >
               <span>próxima</span>
               <img src=${forwardArrows} alt="ir para próxima música"/>
@@ -353,26 +352,24 @@ export default class ResultsPage extends SuperClass {
     `;
   }
 
-  // @todo Refactor all code below
   async firstUpdated(changedProperties) {
-    try {
-      await super.firstUpdated(changedProperties);
+    await super.firstUpdated(changedProperties);
 
-      const playerVotes = Array.from(store.ongoingRound.evaluations.values())
-        .filter((ev) => ev.evaluator.id === store.currentUser.id);
-
-      if (!playerVotes.length) {
-        this.safeOpenAlertModal(this.alertCodes.HAS_NOT_VOTED);
-      } else {
-        this.hasPlayerVotedThisRound = true;
-      }
-
-      this.updateSubmissions(store.ongoingRound.id);
-    } catch (e) {
-      this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU, e.message);
-    }
+    this.checkHasPlayerVotedThisRound();
+    this.updateSubmissions(store.ongoingRound.id);
 
     this.isLoading = false;
+  }
+
+  checkHasPlayerVotedThisRound() {
+    const playerVotes = Array.from(store.ongoingRound.evaluations.values())
+      .filter((ev) => ev.evaluator.id === store.currentUser.id);
+
+    if (!playerVotes.length) {
+      this.safeOpenAlertModal(this.alertCodes.HAS_NOT_VOTED);
+    } else {
+      this.hasPlayerVotedThisRound = true;
+    }
   }
 
   updateSubmissions(roundId) {
@@ -385,38 +382,79 @@ export default class ResultsPage extends SuperClass {
     return `https://youtube.com/watch?v=${id}`;
   }
 
-  getPreviousRound() {
-    this.roundIndex -= 1;
+  async onNextRoundClick() {
+    if (this.lastRoundIndex > this.roundIndex) {
+      this.shiftRoundBy(1);
+      return;
+    }
+    await this.onIsLastRoundLoaded();
+  }
+
+  async onIsLastRoundLoaded() {
+    this.hasOngoingRequest = true;
+    await this.maybeLoadNextRound();
+    this.hasOngoingRequest = false;
+
+    if (this.lastRoundIndex > this.roundIndex) {
+      this.shiftRoundBy(1);
+    } else {
+      this.onRoundLimitReached();
+    }
+  }
+
+  async maybeLoadNextRound() {
+    await store.fetchNextPaginatedRound(
+      getFirebaseTimestamp(this.currentRound.submissionsStartAt),
+    );
+  }
+
+  onPreviousRoundClick() {
+    this.shiftRoundBy(-1);
+  }
+
+  shiftRoundBy(n) {
+    this.roundIndex += n;
     this.submissionIndex = 0;
     this.updateSubmissions(this.currentRound.id);
   }
 
-  async getNextRound() {
-    this.hasOngoingRequest = true;
-    const maxRoundIndex = this.rounds.length - 1;
-    if (maxRoundIndex > this.roundIndex) {
-      this.roundIndex += 1;
-      this.submissionIndex = 0;
-      this.updateSubmissions(this.currentRound.id);
-    } else {
-      await store.fetchNextPaginatedRound(
-        getFirebaseTimestamp(this.currentRound.submissionsStartAt),
-      );
-      const newMaxRoundIndex = this.rounds.length - 1;
-      if (newMaxRoundIndex > this.roundIndex) {
-        this.roundIndex += 1;
-        this.submissionIndex = 0;
-        this.updateSubmissions(this.currentRound.id);
-      } else {
-        this.maxRoundIndex = newMaxRoundIndex;
-        this.safeOpenAlertModal(this.alertCodes.FIRST_ROUND_REACHED);
-      }
-    }
-    this.hasOngoingRequest = false;
+  onRoundLimitReached() {
+    this.maxRoundIndex = this.lastRoundIndex;
+    this.safeOpenAlertModal(this.alertCodes.FIRST_ROUND_REACHED);
+  }
+
+  shouldDisableNextSubmissionButton() {
+    const isLastSubmission = this.submissionIndex >= this.submissions?.length - 1;
+    return !this.canSeeCurrentRoundResults
+      || isLastSubmission
+      || this.hasOngoingRequest;
+  }
+
+  shouldDisablePreviousSubmissionButton() {
+    const isFirstSubmission = this.submissionIndex <= 0;
+    return !this.canSeeCurrentRoundResults
+      || isFirstSubmission
+      || this.hasOngoingRequest;
+  }
+
+  shouldDisablePreviousRoundButton() {
+    const isFirstRound = this.roundIndex <= 0;
+    return isFirstRound
+      || this.hasOngoingRequest;
+  }
+
+  shouldDisableNextRoundButton() {
+    const isLastRound = this.roundIndex >= this.maxRoundIndex;
+    return isLastRound
+      || this.hasOngoingRequest;
   }
 
   get rounds() {
     return Array.from(store.rounds.values());
+  }
+
+  get lastRoundIndex() {
+    return this.rounds.length - 1;
   }
 
   get currentRound() {
@@ -428,12 +466,16 @@ export default class ResultsPage extends SuperClass {
   }
 
   get canSeeCurrentRoundResults() {
-    return this.hasPlayerVotedThisRound || this.currentRound.id !== store.ongoingRound.id;
+    return !this.isOngoingRound || this.hasPlayerVotedThisRounds;
   }
 
   get startDate() {
     const { submissionsStartAt } = this.currentRound || { submissionsStartAt: new Date() };
     return submissionsStartAt.toLocaleDateString();
+  }
+
+  get isOngoingRound() {
+    return this.currentRound.id === store.ongoingRound.id;
   }
 }
 
