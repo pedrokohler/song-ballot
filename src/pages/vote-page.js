@@ -367,7 +367,17 @@ export default class VotePage extends SuperClass {
   }
 
   setSubmissions() {
-    this.submissions = this.getOtherUsersSubmissions(store.currentUser, store.submissions);
+    // @todo refactor shuffleArray function
+    const shuffleArray = (unshuffled) => unshuffled
+      .reduceRight((shuffled, el, i) => {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        return shuffled;
+      }, unshuffled);
+
+    this.submissions = shuffleArray(
+      this.getOtherUsersSubmissions(store.currentUser, store.submissions),
+    );
   }
 
   refreshScreenSubmissionEvaluation() {
