@@ -245,7 +245,7 @@ export default class SendSongPage extends SuperClass {
 
   setSongsSent() {
     const userSubmissions = Array
-      .from(store.submissions.values())
+      .from(store.ongoingRound.submissions.values())
       .filter((submission) => submission.submitter.id === store.currentUser.id);
 
     this.songsSent = userSubmissions.length;
@@ -388,6 +388,8 @@ export default class SendSongPage extends SuperClass {
   updateStore(song, submission) {
     store.addSong(song);
     store.addSubmission(submission);
+    store.ongoingRound.addSong(song.id);
+    store.ongoingRound.addSubmission(submission.id);
   }
 
   async persistData(song, submission) {

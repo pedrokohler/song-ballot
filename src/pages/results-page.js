@@ -207,7 +207,7 @@ export default class ResultsPage extends SuperClass {
     return html`
         <default-background>
             <section class="shell">
-                <h3>Resultado da rodada</h3>
+                <h3>Resultado${this.currentRound.id === store.ongoingRound.id ? " parcial " : " "}da rodada</h3>
                 <h4>Semana ${this.startDate}</h4>
                 ${this.roundOverViewTemplate()}
                 ${this.roundNavigationSectionTemplate()}

@@ -39,9 +39,19 @@ export const Round = types.model({
   },
 }))
   .actions((self) => ({
-    addEvaluation(evaluation) {
-      if (!self.evaluations.includes(evaluation)) {
-        self.evaluations.push(evaluation);
+    addEvaluation(evaluationId) {
+      if (!self.evaluations.includes(evaluationId)) {
+        self.evaluations = [...self.evaluations, evaluationId];
+      }
+    },
+    addSubmission(submissionId) {
+      if (!self.submissions.includes(submissionId)) {
+        self.submissions = [...self.submissions, submissionId];
+      }
+    },
+    addSong(songId) {
+      if (!self.songs.includes(songId)) {
+        self.songs = [...self.songs, songId];
       }
     },
   }));
