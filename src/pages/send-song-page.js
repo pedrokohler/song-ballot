@@ -192,17 +192,29 @@ export default class SendSongPage extends SuperClass {
 
   async firstUpdated(changedProperties) {
     await super.firstUpdated(changedProperties);
-    const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
-    this.setDateStrings(submissionsStartAt, submissionsEndAt);
-    this.setSongLimit();
-    this.setSongsSent();
+
+    this.setupPageBasedOnOngoingRound();
+
+    this.isLoading = false;
+  }
+
+  setupPageBasedOnOngoingRound() {
+    this.updatePageBaseVariables();
 
     const errorCode = this.checkForErrors(this.getCheckFunctionsMap());
     if (errorCode) {
       this.safeOpenAlertModal(errorCode);
+      return errorCode;
     }
 
-    this.isLoading = false;
+    return null;
+  }
+
+  updatePageBaseVariables() {
+    const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
+    this.setDateStrings(submissionsStartAt, submissionsEndAt);
+    this.setSongLimit();
+    this.setSongsSent();
   }
 
   getCheckFunctionsMap() {
@@ -352,6 +364,13 @@ export default class SendSongPage extends SuperClass {
   }
 
   async performVideoSubmission() {
+    await this.refreshOngoingRound();
+    const error = this.setupPageBasedOnOngoingRound();
+
+    if (error) {
+      return;
+    }
+
     const { songModel, submissionModel } = this.generateVideoAndSubmissionModels({
       videoId: this.videoId,
       videoURL: this.videoURL,

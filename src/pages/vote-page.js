@@ -259,9 +259,9 @@ export default class VotePage extends SuperClass {
   overviewTemplate() {
     return html`
       ${this.submissions.map((sub) => html`
-        <label>${sub.song.title}</label>
-        <label>Nota ${this.getScoreFromLocalStorage(sub.id) || "inválida"}</label>
-        <label>${this.getIsFamousFromLocalStorage(sub.id) === "true" ? "Famosa" : ""}</label>
+        <label>${sub.song?.title}</label>
+        <label>Nota ${this.getScoreFromLocalStorage(sub?.id) || "inválida"}</label>
+        <label>${this.getIsFamousFromLocalStorage(sub?.id) === "true" ? "Famosa" : ""}</label>
         <hr/>
       `)}
       <section class="navigation-section">
@@ -274,7 +274,7 @@ export default class VotePage extends SuperClass {
           </button>
           <button
               class="navigation-btn"
-              @click=${this.handleEvaluation.bind(this)}
+              @click=${this.handleConfirmationClick.bind(this)}
               ?disabled=${this.hasOngoingRequest}
           >
               <span>confirmar</span>
@@ -286,17 +286,22 @@ export default class VotePage extends SuperClass {
   async firstUpdated(changedProperties) {
     await super.firstUpdated(changedProperties);
 
+    this.setupPageBasedOnOngoingRound();
+
+    this.isLoading = false;
+  }
+
+  setupPageBasedOnOngoingRound() {
     const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
     this.setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt });
 
     const errorCode = this.checkForErrors(this.getCheckFunctionsMap());
     if (errorCode) {
       this.safeOpenAlertModal(errorCode);
-    } else {
-      this.onInitialChecksPassed();
+      return errorCode;
     }
-
-    this.isLoading = false;
+    this.onInitialChecksPassed();
+    return null;
   }
 
   onInitialChecksPassed() {
@@ -478,8 +483,23 @@ export default class VotePage extends SuperClass {
     || value === "";
   }
 
-  async handleEvaluation() {
+  async handleConfirmationClick() {
     this.hasOngoingRequest = true;
+
+    await this.refreshOngoingRound();
+    const error = this.setupPageBasedOnOngoingRound();
+
+    if (error) {
+      this.runPostTransactionCleanup();
+      return;
+    }
+
+    await this.handleEvaluation();
+
+    this.hasOngoingRequest = false;
+  }
+
+  async handleEvaluation() {
     try {
       const evaluations = this.getSanitizedEvaluationsPayload();
       const evaluationsIds = evaluations.map((evaluation) => evaluation.id);
@@ -498,7 +518,6 @@ export default class VotePage extends SuperClass {
       this.safeOpenAlertModal(this.alertCodes.VOTE_SUCCESS);
     } catch (e) {
       this.checkAndTreatEvaluationError(e);
-      this.hasOngoingRequest = false;
     }
   }
 

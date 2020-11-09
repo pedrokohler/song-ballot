@@ -11,10 +11,14 @@ export default function OngoingRoundDependableMixin(superClass) {
   return class OngoingRoundDependable extends SuperClass {
     async firstUpdated(changedProperties) {
       super.firstUpdated(changedProperties);
+      if (!store.ongoingRound) {
+        await this.refreshOngoingRound();
+      }
+    }
+
+    async refreshOngoingRound() {
       try {
-        if (!store.ongoingRound) {
-          await store.getOngoingRound();
-        }
+        await store.getOngoingRound();
       } catch (e) {
         this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU,
           `Ocorreu um erro ao carregar a rodada atual: ${e.message}`);
