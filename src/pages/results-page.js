@@ -367,12 +367,18 @@ export default class ResultsPage extends SuperClass {
         this.hasPlayerVotedThisRound = true;
       }
 
-      this.submissions = Array.from(store.ongoingRound?.submissions?.values());
+      this.updateSubmissions(store.ongoingRound.id);
     } catch (e) {
       this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU, e.message);
     }
 
     this.isLoading = false;
+  }
+
+  updateSubmissions(roundId) {
+    this.submissions = Array
+      .from(store.rounds.get(roundId)?.submissions?.values())
+      .sort((a, b) => b.points - a.points);
   }
 
   getDirectYoutubeUrl(id) {
@@ -382,7 +388,7 @@ export default class ResultsPage extends SuperClass {
   getPreviousRound() {
     this.roundIndex -= 1;
     this.submissionIndex = 0;
-    this.submissions = Array.from(this.currentRound?.submissions?.values());
+    this.updateSubmissions(this.currentRound.id);
   }
 
   async getNextRound() {
@@ -391,7 +397,7 @@ export default class ResultsPage extends SuperClass {
     if (maxRoundIndex > this.roundIndex) {
       this.roundIndex += 1;
       this.submissionIndex = 0;
-      this.submissions = Array.from(this.currentRound?.submissions?.values());
+      this.updateSubmissions(this.currentRound.id);
     } else {
       await store.fetchNextPaginatedRound(
         getFirebaseTimestamp(this.currentRound.submissionsStartAt),
@@ -400,7 +406,7 @@ export default class ResultsPage extends SuperClass {
       if (newMaxRoundIndex > this.roundIndex) {
         this.roundIndex += 1;
         this.submissionIndex = 0;
-        this.submissions = Array.from(this.currentRound?.submissions?.values());
+        this.updateSubmissions(this.currentRound.id);
       } else {
         this.maxRoundIndex = newMaxRoundIndex;
         this.safeOpenAlertModal(this.alertCodes.FIRST_ROUND_REACHED);
