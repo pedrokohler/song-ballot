@@ -158,11 +158,6 @@ export default class ResultsPage extends SuperClass {
           pointer-events: none;
         }
 
-        td {
-          text-align: center;
-          font-weight: 300;
-        }
-
         .submission-status-header {
           margin-bottom: 1em;
           font-size: 1em;
@@ -376,8 +371,8 @@ export default class ResultsPage extends SuperClass {
     const { score, ratedFamous, evaluator: { displayName } } = ev;
     return html`
       <tr>
-        <td style="text-align: left">
-          <p>${displayName}</p>
+        <td>
+          <p style="text-align: left">${displayName}</p>
         </td>
         <td>
           <p>${score}</p>
