@@ -286,12 +286,12 @@ export default class VotePage extends SuperClass {
   async firstUpdated(changedProperties) {
     await super.firstUpdated(changedProperties);
 
-    this.setupPageBasedOnOngoingRound();
+    this.setupAndCheckPageBasedOnOngoingRound();
 
     this.isLoading = false;
   }
 
-  setupPageBasedOnOngoingRound() {
+  setupAndCheckPageBasedOnOngoingRound() {
     const { submissionsStartAt, evaluationsStartAt, evaluationsEndAt } = store.ongoingRound;
     this.setDateStrings({ submissionsStartAt, evaluationsStartAt, evaluationsEndAt });
 
@@ -487,7 +487,7 @@ export default class VotePage extends SuperClass {
     this.hasOngoingRequest = true;
 
     await this.refreshOngoingRound();
-    const error = this.setupPageBasedOnOngoingRound();
+    const error = this.setupAndCheckPageBasedOnOngoingRound();
 
     if (error) {
       this.runPostTransactionCleanup();

@@ -22,6 +22,7 @@ export default class ResultsPage extends SuperClass {
   static get styles() {
     return css`
         .shell {
+            font-size: 120%;
             border-radius: 3px;
             min-height: 200px;
             height: inherit;
@@ -161,6 +162,36 @@ export default class ResultsPage extends SuperClass {
           text-align: center;
           font-weight: 300;
         }
+
+        .submission-status-header {
+          margin-bottom: 1em;
+          font-size: 1em;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+        }
+
+        @media only screen and (max-width: 600px) {
+          .shell {
+              font-size: 100%;
+          }
+          .submission-status-header {
+            font-size: 1em;
+          }
+        }
+
+        .player-ranking-section {
+          margin-bottom: 1em;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+        }
+
+        a {
+          color: #FBC303;
+        }
     `;
   }
 
@@ -213,7 +244,7 @@ export default class ResultsPage extends SuperClass {
                 ${this.roundNavigationSectionTemplate()}
             </section>
             <section class="shell">
-                <h3>Pontuação das músicas</h3>
+                <h3>Avaliação das músicas</h3>
                 ${this.submissionOverviewTemplate()}
                 ${this.submissionNavigationSectionTemplate()}
             </section>
@@ -290,11 +321,13 @@ export default class ResultsPage extends SuperClass {
   playerRankingTemplate(title, fieldName) {
     const song = this.currentRound?.[fieldName]?.song;
     return html`
-      <h5>${title}</h5>
-      <a href=${this.getDirectYoutubeUrl(song?.id)} target="_blank">
-        <p>${song?.title}</p>
-      </a>
-      <p>${this.currentRound?.[fieldName]?.submitter?.displayName}</p>
+      <section class="player-ranking-section">
+        <h5>${title}</h5>
+        <p>${this.currentRound?.[fieldName]?.submitter?.displayName}</p>
+        <a href=${this.getDirectYoutubeUrl(song?.id)} target="_blank">
+          <p>${song?.title}</p>
+        </a>
+      </section>
     `;
   }
 
@@ -312,20 +345,24 @@ export default class ResultsPage extends SuperClass {
 
   submissionStatusTemplate() {
     return html`
-      <h4 class="displayName">${this.currentSubmission?.submitter?.displayName}</h4>
-      <a href=${this.getDirectYoutubeUrl(this.currentSubmission?.song?.id)} target="_blank">
-        <p>${this.currentSubmission?.song?.title}</p>
-      </a>
-      <h4>Nota</h4>
+      <section class="submission-status-header">
+        <h4 class="displayName">${this.currentSubmission?.submitter?.displayName}</h4>
+        <a href=${this.getDirectYoutubeUrl(this.currentSubmission?.song?.id)} target="_blank">
+          <p>${this.currentSubmission?.song?.title}</p>
+        </a>
+      </section>
+      <h5>Nota Final</h5>
       <p>${this.currentSubmission?.points}</p>
-      <h4>Pontos</h4>
+      <h5>Pontuação Final</h5>
       <p>${this.currentSubmission?.total}</p>
+      <h5>Penalidade</h5>
+      <p>${this.currentSubmission?.penalty}</p>
       <table>
           <thead>
             <tr>
-              <th>Nome</th>
-              <th>Pontuação</th>
-              <th>Famosa?</th>
+              <th><h5>Avaliador</h5></th>
+              <th><h5>Pontos</h5></th>
+              <th><h5>Famosa?</h5></th>
             </tr>
           </thead>
           <tbody>
@@ -340,13 +377,13 @@ export default class ResultsPage extends SuperClass {
     return html`
       <tr>
         <td style="text-align: left">
-          <span>${displayName}</span>
+          <p>${displayName}</p>
         </td>
         <td>
-          <span>${score}</span>
+          <p>${score}</p>
         </td>
         <td>
-          <span>${ratedFamous ? "Sim" : "Não"}</span>
+          <p>${ratedFamous ? "Sim" : "Não"}</p>
         </td>
       </tr>
     `;

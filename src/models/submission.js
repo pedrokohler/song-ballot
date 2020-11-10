@@ -25,8 +25,11 @@ export const Submission = types
     get total() {
       return self.evaluations?.reduce((total, ev) => total + ev.score, 0);
     },
+    get penalty() {
+      return self.isFamous ? 1 : 0;
+    },
     get points() {
-      const penalty = self.isFamous ? 1 : 0;
+      const { penalty } = self;
       const basePoints = self.numberOfEvaluations
         ? (self.total / self.numberOfEvaluations + Number.EPSILON)
         : 0;

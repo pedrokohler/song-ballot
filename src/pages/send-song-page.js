@@ -193,12 +193,12 @@ export default class SendSongPage extends SuperClass {
   async firstUpdated(changedProperties) {
     await super.firstUpdated(changedProperties);
 
-    this.setupPageBasedOnOngoingRound();
+    this.setupAndCheckPageBasedOnOngoingRound();
 
     this.isLoading = false;
   }
 
-  setupPageBasedOnOngoingRound() {
+  setupAndCheckPageBasedOnOngoingRound() {
     this.updatePageBaseVariables();
 
     const errorCode = this.checkForErrors(this.getCheckFunctionsMap());
@@ -365,7 +365,7 @@ export default class SendSongPage extends SuperClass {
 
   async performVideoSubmission() {
     await this.refreshOngoingRound();
-    const error = this.setupPageBasedOnOngoingRound();
+    const error = this.setupAndCheckPageBasedOnOngoingRound();
 
     if (error) {
       return;
