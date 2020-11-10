@@ -381,7 +381,7 @@ export default class VotePage extends SuperClass {
       }, unshuffled);
 
     this.submissions = shuffleArray(
-      this.getOtherUsersSubmissions(store.currentUser, store.submissions),
+      this.getOtherUsersSubmissions(store.currentUser, store.ongoingRound.submissions),
     );
   }
 

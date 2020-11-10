@@ -503,7 +503,7 @@ export default class ResultsPage extends SuperClass {
   }
 
   get canSeeCurrentRoundResults() {
-    return !this.isOngoingRound || this.hasPlayerVotedThisRounds;
+    return !this.isOngoingRound || this.hasPlayerVotedThisRound;
   }
 
   get startDate() {
