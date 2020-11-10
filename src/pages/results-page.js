@@ -314,7 +314,7 @@ export default class ResultsPage extends SuperClass {
     return html`
       ${this.playerRankingTemplate("Vencedor", "firstPlace")}
       ${this.playerRankingTemplate("Segundo colocado", "secondPlace")}
-      ${this.playerRankingTemplate("Último ", "lastPlace")}
+      ${this.playerRankingTemplate("Último colocado", "lastPlace")}
     `;
   }
 
@@ -356,7 +356,7 @@ export default class ResultsPage extends SuperClass {
       <h5>Pontuação Final</h5>
       <p>${this.currentSubmission?.total}</p>
       <h5>Penalidade</h5>
-      <p>${this.currentSubmission?.penalty}</p>
+      <p>${-this.currentSubmission?.penalty}</p>
       <table>
           <thead>
             <tr>
