@@ -348,7 +348,7 @@ export default class ResultsPage extends SuperClass {
       </section>
       <h5>Nota Final</h5>
       <p>${this.currentSubmission?.points}</p>
-      <h5>Pontuação Final</h5>
+      <h5>Pontuação Total</h5>
       <p>${this.currentSubmission?.total}</p>
       <h5>Penalidade</h5>
       <p>${-this.currentSubmission?.penalty}</p>
