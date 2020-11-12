@@ -2,12 +2,12 @@
 import { types } from "mobx-state-tree";
 import { User } from "./user";
 import { Evaluation } from "./evaluation";
-import { DefaultModel } from "./default";
+import { BaseModel } from "./base";
 import { Song } from "./song";
 import { Round } from "./round";
 
 export const Submission = types
-  .compose(DefaultModel)
+  .compose(BaseModel)
   .named("Submission")
   .props({
     submitter: types.reference(User),
@@ -20,10 +20,12 @@ export const Submission = types
       return self.evaluations?.length;
     },
     get timesRatedFamous() {
-      return self.evaluations?.reduce((total, ev) => (ev.ratedFamous ? total + 1 : total), 0);
+      return self.evaluations
+        ?.reduce((total, evaluation) => (evaluation.ratedFamous ? total + 1 : total), 0);
     },
     get total() {
-      return self.evaluations?.reduce((total, ev) => total + ev.score, 0);
+      return self.evaluations
+        ?.reduce((total, evaluation) => total + evaluation.score, 0);
     },
     get penalty() {
       return self.isFamous ? 1 : 0;

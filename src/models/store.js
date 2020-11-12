@@ -7,7 +7,7 @@ import { Song } from "./song";
 import { Submission } from "./submission";
 import { Evaluation } from "./evaluation";
 import { Round } from "./round";
-import { DefaultModel } from "./default";
+import { BaseModel } from "./base";
 
 const chunkArray = (array, maxElements) => array
   .reduce((acc, el, i) => {
@@ -17,7 +17,7 @@ const chunkArray = (array, maxElements) => array
   }, []);
 
 export const RootStore = types
-  .compose(DefaultModel)
+  .compose(BaseModel)
   .named("RootStore")
   .props({
     authStateChecked: types.boolean,
@@ -100,25 +100,25 @@ export const RootStore = types
     setCurrentGroup(id) {
       self.currentGroup = id;
     },
-    getCurrentGroupRef() {
+    getCurrentGroupReference() {
       return db.collection("groups").doc(self.currentGroup);
     },
-    getRoundRef(roundId) {
+    getRoundReference(roundId) {
       return self
-        .getCurrentGroupRef()
+        .getCurrentGroupReference()
         .collection("rounds")
         .doc(roundId)
         .withConverter(DateConverter);
     },
     fetchAndLoadRound: flow(function* fetchAndLoadRound(roundId) {
-      const roundDoc = yield self.getRoundRef(roundId).get();
+      const roundDoc = yield self.getRoundReference(roundId).get();
       const round = { id: roundId, ...roundDoc.data() };
 
       yield self.loadRound(round);
     }),
     fetchNextPaginatedRound: flow(function* fetchPaginatedRound(startAfter) {
       const roundsSnapshot = yield self
-        .getCurrentGroupRef()
+        .getCurrentGroupReference()
         .collection("rounds")
         .orderBy("submissionsStartAt", "desc")
         .startAfter(startAfter)
@@ -144,7 +144,7 @@ export const RootStore = types
       yield self.loadRoundEvaluations(roundId);
     }),
     getOngoingRound: flow(function* getOngoingRound() {
-      const groupDoc = yield self.getCurrentGroupRef().get();
+      const groupDoc = yield self.getCurrentGroupReference().get();
       const { ongoingRound: ongoingRoundId } = groupDoc.data();
 
       yield self.fetchAndLoadRound(ongoingRoundId);
@@ -164,28 +164,30 @@ export const RootStore = types
       }
     },
     loadRoundUsers([...userIds]) {
-      const generateQueryRef = (batch) => db.collection("users")
+      const generateQueryReference = (batch) => db.collection("users")
         .where("id", "in", batch)
         .withConverter(DateConverter);
 
-      const performQueryAndUpdateStore = async (queryRef) => {
-        const users = await queryRef.get();
+      const performQueryAndUpdateStore = async (queryReference) => {
+        const users = await queryReference.get();
         users.forEach((user) => self.addUser(user.data()));
       };
 
       const maxUsersPerQuery = 10; // firebase limit for 'in' operator
-      const queryRefs = chunkArray(userIds, maxUsersPerQuery).map((ids) => generateQueryRef(ids));
+      const queryReferences = chunkArray(userIds, maxUsersPerQuery)
+        .map((ids) => generateQueryReference(ids));
 
-      return Promise.all(queryRefs.map((queryRef) => performQueryAndUpdateStore(queryRef)));
+      return Promise.all(queryReferences
+        .map((queryReference) => performQueryAndUpdateStore(queryReference)));
     },
-    getSongsRef(roundId) {
-      return self.getCurrentGroupRef()
+    getSongsReference(roundId) {
+      return self.getCurrentGroupReference()
         .collection("songs")
         .where("round", "==", roundId)
         .withConverter(DateConverter);
     },
     loadRoundSongs(roundId) {
-      return self.getSongsRef(roundId)
+      return self.getSongsReference(roundId)
         .get()
         .then((snapshot) => {
           snapshot.forEach((doc) => {
@@ -194,14 +196,14 @@ export const RootStore = types
           });
         });
     },
-    getSubmissionsRef(roundId) {
-      return self.getCurrentGroupRef()
+    getSubmissionsReference(roundId) {
+      return self.getCurrentGroupReference()
         .collection("submissions")
         .where("round", "==", roundId)
         .withConverter(DateConverter);
     },
     loadRoundSubmissions(roundId) {
-      return self.getSubmissionsRef(roundId)
+      return self.getSubmissionsReference(roundId)
         .get()
         .then((snapshot) => {
           snapshot.forEach((doc) => {
@@ -210,14 +212,14 @@ export const RootStore = types
           });
         });
     },
-    getEvaluationsRef(roundId) {
-      return self.getCurrentGroupRef()
+    getEvaluationsReference(roundId) {
+      return self.getCurrentGroupReference()
         .collection("evaluations")
         .where("round", "==", roundId)
         .withConverter(DateConverter);
     },
     loadRoundEvaluations(roundId) {
-      return this.getEvaluationsRef(roundId)
+      return this.getEvaluationsReference(roundId)
         .get()
         .then((snapshot) => {
           snapshot.forEach((doc) => {

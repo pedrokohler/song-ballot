@@ -3,10 +3,10 @@ const admin = require("firebase-admin");
 const axios = require("axios");
 const {
   now: firebaseNow,
-  getGroupRef,
-  getUserRef,
-  getRoundRef,
-  getEvaluationsRef,
+  getGroupReference,
+  getUserReference,
+  getRoundReference,
+  getEvaluationsReference,
 } = require("./helpers/firebase");
 const {
   getDayOfNextWeekWithTime,
@@ -18,7 +18,7 @@ exports.initializeUser = functions.auth.user().onCreate(async (user) => {
   const {
     uid: id, displayName, email, photoURL
   } = user;
-  await getUserRef(id).set({
+  await getUserReference(id).set({
     id,
     displayName,
     email,
@@ -103,27 +103,27 @@ const finishRound = async (groupId, roundId) => {
 
 const updateRoundEvaluationsEndAt = async (groupId, roundId) => {
   const now = firebaseNow();
-  const roundRef = getRoundRef(groupId, roundId);
-  await roundRef.update({ evaluationsEndAt: now });
+  const roundReference = getRoundReference(groupId, roundId);
+  await roundReference.update({ evaluationsEndAt: now });
 }
 
 const computeRoundWinner = async (groupId, roundId) => {
-  const evaluations = await getEvaluationsRef(groupId)
+  const evaluations = await getEvaluationsReference(groupId)
   .where("round", "==", roundId)
   .get();
 
   const results = evaluations.docs.reduce((results, doc) => {
-    const ev = doc.data();
-    const songId = ev.song;
+    const evaluation = doc.data();
+    const songId = evaluation.song;
     if (results[songId]) {
       return {
         ...results,
-        [songId]: updateVoteCounting(results[songId], ev)
+        [songId]: updateVoteCounting(results[songId], evaluation)
       };
     }
     return {
       ...results,
-      [songId]: initializeVoteCounting(ev)
+      [songId]: initializeVoteCounting(evaluation)
     }
   }, {});
 
@@ -170,12 +170,12 @@ const calculatePenalty = ({ ratedFamous, timesVoted }) => {
 
 const startNewRound = async (groupId, lastWinner) => {
   const now = firebaseNow();
-  const groupRef = getGroupRef(groupId);
+  const groupReference = getGroupReference(groupId);
 
-  const group = await groupRef.get();
+  const group = await groupReference.get();
   const { users } = group.data();
 
-  const round = await groupRef.collection("rounds").add({
+  const round = await groupReference.collection("rounds").add({
     submissionsStartAt: now,
     submissionsEndAt: getDayOfNextWeekWithTime("tuesday", 15, 0, 0),
     evaluationsStartAt: getDayOfNextWeekWithTime("tuesday", 15, 0, 1),
@@ -188,7 +188,7 @@ const startNewRound = async (groupId, lastWinner) => {
     voteCount: 0
   });
 
-  await groupRef.update({
+  await groupReference.update({
     ongoingRound: round.id,
   });
 }
@@ -211,8 +211,8 @@ const handleNewSubmission = async ({
 
 const startRoundEvaluationPeriod = async (groupId, roundId) => {
   const now = firebaseNow();
-  const roundRef = getRoundRef(groupId, roundId);
-  await roundRef.update({ submissionsEndAt: now, evaluationsStartAt: now });
+  const roundReference = getRoundReference(groupId, roundId);
+  await roundReference.update({ submissionsEndAt: now, evaluationsStartAt: now });
 }
 
 

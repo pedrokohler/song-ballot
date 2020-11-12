@@ -4,11 +4,10 @@ import "@polymer/paper-progress/paper-progress";
 
 import { store } from "../store";
 import { handleGoogleSignIn } from "../services/firebase";
-import "../components/google-sing-in-button";
+import "../components/google-sign-in-button";
 import "../components/alert-modal";
 
-// eslint-disable-next-line no-unused-vars
-import Background from "../images/background.jpg"; // so that webpack loads the image
+import "../images/background.jpg"; // so that webpack builds with the image
 import VerticalLogo from "../images/vertical-logo.png";
 
 export default class LoginPage extends observer(LitElement) {

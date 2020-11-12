@@ -2,26 +2,26 @@ const admin = require("firebase-admin");
 
 const now = () => admin.firestore.FieldValue.serverTimestamp();
 
-const getGroupRef = id => admin.firestore()
+const getGroupReference = id => admin.firestore()
 .collection("groups")
 .doc(id);
 
-const getCollectionRef = (collection) => (groupId) => getGroupRef(groupId)
+const getCollectionReference = (collection) => (groupId) => getGroupReference(groupId)
 .collection(collection);
 
-const getDocRef = (collection) => (groupId, docId) => getCollectionRef(collection)(groupId)
+const getDocReference = (collection) => (groupId, docId) => getCollectionReference(collection)(groupId)
 .doc(docId);
 
-const getUserRef = id => admin.firestore().collection("users").doc(id);
+const getUserReference = id => admin.firestore().collection("users").doc(id);
 
-const getRoundRef = getDocRef("rounds");
+const getRoundReference = getDocReference("rounds");
 
-const getEvaluationsRef = getCollectionRef("evaluations");
+const getEvaluationsReference = getCollectionReference("evaluations");
 
 module.exports  = {
     now,
-    getUserRef,
-    getGroupRef,
-    getRoundRef,
-    getEvaluationsRef,
+    getUserReference,
+    getGroupReference,
+    getRoundReference,
+    getEvaluationsReference,
 }

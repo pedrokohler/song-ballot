@@ -4,10 +4,10 @@ import { User } from "./user";
 import { Song } from "./song";
 // eslint-disable-next-line import/no-cycle
 import { Round } from "./round";
-import { DefaultModel } from "./default";
+import { BaseModel } from "./base";
 
 export const Evaluation = types
-  .compose(DefaultModel)
+  .compose(BaseModel)
   .named("Evaluation")
   .props({
     evaluator: types.reference(User),

@@ -31,7 +31,7 @@ export default CustomizableModalDisplayableMixin({
     [customizedAlertCodes.SUBMISSION_SUCCESS, {
       needsErrorMessage: false,
       messageGenerator() {
-        return `Música enviada com sucesso! ${this.songsSent < this.songLimit
+        return `Música enviada com sucesso! ${this.userSubmissionsSent < this.userSubmissionsLimit
           ? "Você ainda pode enviar mais uma música!"
           : ""}`;
       },

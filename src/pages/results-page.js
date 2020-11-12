@@ -12,13 +12,13 @@ import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin
 import ResultsModalDisplayableMixin from "./mixins/modal-displayable-mixins/results-modal-displayable-mixin";
 import { getFirebaseTimestamp } from "../services/firebase";
 
-const SuperClass = ResultsModalDisplayableMixin(
+const BaseClass = ResultsModalDisplayableMixin(
   OngoingRoundDependableMixin(
     LitElement,
   ),
 );
 
-export default class ResultsPage extends SuperClass {
+export default class ResultsPage extends BaseClass {
   static get styles() {
     return css`
         .shell {
@@ -46,7 +46,7 @@ export default class ResultsPage extends SuperClass {
             text-align: center;
         }
 
-        .displayName {
+        .display-name {
           text-align: left;
           font-size: 0.8em;
         }
@@ -341,7 +341,7 @@ export default class ResultsPage extends SuperClass {
   submissionStatusTemplate() {
     return html`
       <section class="submission-status-header">
-        <h4 class="displayName">${this.currentSubmission?.submitter?.displayName}</h4>
+        <h4 class="display-name">${this.currentSubmission?.submitter?.displayName}</h4>
         <a href=${this.getDirectYoutubeUrl(this.currentSubmission?.song?.id)} target="_blank">
           <p>${this.currentSubmission?.song?.title}</p>
         </a>
@@ -367,8 +367,8 @@ export default class ResultsPage extends SuperClass {
     `;
   }
 
-  tableRowTemplate(ev) {
-    const { score, ratedFamous, evaluator: { displayName } } = ev;
+  tableRowTemplate(evaluation) {
+    const { score, ratedFamous, evaluator: { displayName } } = evaluation;
     return html`
       <tr>
         <td>
@@ -387,21 +387,20 @@ export default class ResultsPage extends SuperClass {
   async firstUpdated(changedProperties) {
     await super.firstUpdated(changedProperties);
 
-    this.checkHasPlayerVotedThisRound();
+    this.hasPlayerVotedThisRound = this.checkHasPlayerVotedThisRound();
+
+    if (!this.hasPlayerVotedThisRound) {
+      this.safeOpenAlertModal(this.alertCodes.HAS_NOT_VOTED);
+    }
+
     this.updateSubmissions(store.ongoingRound.id);
 
     this.isLoading = false;
   }
 
   checkHasPlayerVotedThisRound() {
-    const playerVotes = Array.from(store.ongoingRound.evaluations.values())
-      .filter((ev) => ev.evaluator.id === store.currentUser.id);
-
-    if (!playerVotes.length) {
-      this.safeOpenAlertModal(this.alertCodes.HAS_NOT_VOTED);
-    } else {
-      this.hasPlayerVotedThisRound = true;
-    }
+    return Array.from(store.ongoingRound.evaluations.values())
+      .some((evaluation) => evaluation.evaluator.id === store.currentUser.id);
   }
 
   updateSubmissions(roundId) {

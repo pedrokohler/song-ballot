@@ -10,13 +10,13 @@ import { store } from "../store";
 import SendSongModalDisplayableMixin from "./mixins/modal-displayable-mixins/send-song-modal-displayable-mixin";
 import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
 
-const SuperClass = SendSongModalDisplayableMixin(
+const BaseClass = SendSongModalDisplayableMixin(
   OngoingRoundDependableMixin(
     LitElement,
   ),
 );
 
-export default class SendSongPage extends SuperClass {
+export default class SendSongPage extends BaseClass {
   static get styles() {
     return css`
         section {
@@ -128,10 +128,10 @@ export default class SendSongPage extends SuperClass {
       isLoading: {
         type: Boolean,
       },
-      songsSent: {
+      userSubmissionsSent: {
         type: Number,
       },
-      songLimit: {
+      userSubmissionsLimit: {
         type: Number,
       },
     };
@@ -139,7 +139,7 @@ export default class SendSongPage extends SuperClass {
 
   constructor() {
     super();
-    this.songLimit = 0;
+    this.userSubmissionsLimit = 0;
     this.isLoading = true;
     this.hasOngoingRequest = false;
     this.startDateString = "";
@@ -213,8 +213,8 @@ export default class SendSongPage extends SuperClass {
   updatePageBaseVariables() {
     const { submissionsStartAt, submissionsEndAt } = store.ongoingRound;
     this.setDateStrings(submissionsStartAt, submissionsEndAt);
-    this.setSongLimit();
-    this.setSongsSent();
+    this.defineUserSubmissionLimit();
+    this.defineUserSubmissionsSent();
   }
 
   getCheckFunctionsMap() {
@@ -247,24 +247,24 @@ export default class SendSongPage extends SuperClass {
     return () => Date.now() > submissionsEndAt;
   }
 
-  setSongLimit() {
+  defineUserSubmissionLimit() {
     if (store.ongoingRound.lastWinner?.id === store.currentUser.id) {
-      this.songLimit = 2;
+      this.userSubmissionsLimit = 2;
     } else {
-      this.songLimit = 1;
+      this.userSubmissionsLimit = 1;
     }
   }
 
-  setSongsSent() {
+  defineUserSubmissionsSent() {
     const userSubmissions = Array
       .from(store.ongoingRound.submissions.values())
       .filter((submission) => submission.submitter.id === store.currentUser.id);
 
-    this.songsSent = userSubmissions.length;
+    this.userSubmissionsSent = userSubmissions.length;
   }
 
   checkSongLimit() {
-    return () => this.songsSent >= this.songLimit;
+    return () => this.userSubmissionsSent >= this.userSubmissionsLimit;
   }
 
   async handleConfirmationClick() {
@@ -383,7 +383,7 @@ export default class SendSongPage extends SuperClass {
     await this.persistData(sanitizedSongPayload, sanitizedSubmissionPayload);
 
     this.updateStore(sanitizedSongPayload, sanitizedSubmissionPayload);
-    this.songsSent += 1;
+    this.userSubmissionsSent += 1;
   }
 
   generateVideoAndSubmissionModels({
@@ -412,30 +412,30 @@ export default class SendSongPage extends SuperClass {
   }
 
   async persistData(song, submission) {
-    const songRef = this.getSongRef(song.id);
-    const submissionRef = this.getSubmissionRef(submission.id);
-    const roundRef = this.getRoundRef(store.ongoingRound.id);
+    const songReference = this.getSongReference(song.id);
+    const submissionReference = this.getSubmissionReference(submission.id);
+    const roundReference = this.getRoundReference(store.ongoingRound.id);
 
     await db.runTransaction(this.sendSongTransaction({
-      roundRef,
-      submissionRef,
-      songRef,
+      roundReference,
+      submissionReference,
+      songReference,
       submission,
       song,
     }));
   }
 
   sendSongTransaction({
-    roundRef, submissionRef, submission, songRef, song,
+    roundReference, submissionReference, submission, songReference, song,
   }) {
     return async (transaction) => {
-      const round = await transaction.get(roundRef);
+      const round = await transaction.get(roundReference);
       const updatedSongIds = this.getUpdatedSongIds(round, song.id);
       const updatedSubmissionIds = this.getUpdatedSubmissionsIds(round, submission.id);
-      await transaction.set(songRef, song);
-      await transaction.set(submissionRef, submission);
+      await transaction.set(songReference, song);
+      await transaction.set(submissionReference, submission);
       await transaction.update(
-        roundRef,
+        roundReference,
         { songs: updatedSongIds, submissions: updatedSubmissionIds },
       );
     };
@@ -453,26 +453,26 @@ export default class SendSongPage extends SuperClass {
     return updatedSubmissionIds;
   }
 
-  getRoundRef(roundId) {
-    return this.groupRef.collection("rounds")
+  getRoundReference(roundId) {
+    return this.groupReference.collection("rounds")
       .doc(roundId)
       .withConverter(DateConverter);
   }
 
-  getSubmissionRef(submissionId) {
-    return this.groupRef.collection("submissions")
+  getSubmissionReference(submissionId) {
+    return this.groupReference.collection("submissions")
       .doc(submissionId)
       .withConverter(DateConverter);
   }
 
-  getSongRef(videoId) {
-    return this.groupRef
+  getSongReference(videoId) {
+    return this.groupReference
       .collection("songs")
       .doc(videoId)
       .withConverter(DateConverter);
   }
 
-  get groupRef() {
+  get groupReference() {
     return db.collection("groups").doc(store.currentGroup);
   }
 

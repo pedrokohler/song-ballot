@@ -11,12 +11,12 @@ import { db, DateConverter } from "../services/firebase";
 import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
 import VoteModalDisplayableMixin from "./mixins/modal-displayable-mixins/vote-modal-displayable-mixin";
 
-const SuperClass = VoteModalDisplayableMixin(
+const BaseClass = VoteModalDisplayableMixin(
   OngoingRoundDependableMixin(
     LitElement,
   ),
 );
-export default class VotePage extends SuperClass {
+export default class VotePage extends BaseClass {
   static get styles() {
     return css`
         .shell {
@@ -258,10 +258,10 @@ export default class VotePage extends SuperClass {
 
   overviewTemplate() {
     return html`
-      ${this.submissions.map((sub) => html`
-        <label>${sub.song?.title}</label>
-        <label>Nota ${this.getScoreFromLocalStorage(sub?.id) || "inválida"}</label>
-        <label>${this.getIsFamousFromLocalStorage(sub?.id) === "true" ? "Famosa" : ""}</label>
+      ${this.submissions.map((submission) => html`
+        <label>${submission.song?.title}</label>
+        <label>Nota ${this.getScoreFromLocalStorage(submission?.id) || "inválida"}</label>
+        <label>${this.getIsFamousFromLocalStorage(submission?.id) === "true" ? "Famosa" : ""}</label>
         <hr/>
       `)}
       <section class="navigation-section">
@@ -368,7 +368,7 @@ export default class VotePage extends SuperClass {
 
   getOtherUsersSubmissions(currentUser, submissions) {
     return Array.from(submissions.values())
-      .filter((sub) => sub.submitter.id !== currentUser.id);
+      .filter((submission) => submission.submitter.id !== currentUser.id);
   }
 
   setSubmissions() {
@@ -503,11 +503,11 @@ export default class VotePage extends SuperClass {
     try {
       const evaluations = this.getSanitizedEvaluationsPayload();
       const evaluationsIds = evaluations.map((evaluation) => evaluation.id);
-      const submissionsIds = this.submissions.map((sub) => sub.id);
-      const roundRef = this.getRoundRef(store.ongoingRound.id);
+      const submissionsIds = this.submissions.map((submission) => submission.id);
+      const roundReference = this.getRoundReference(store.ongoingRound.id);
 
       await db.runTransaction(this.evaluationTransaction({
-        roundRef,
+        roundReference,
         submissionsIds,
         evaluationsIds,
         evaluations,
@@ -534,27 +534,28 @@ export default class VotePage extends SuperClass {
   }
 
   getSanitizedEvaluationsPayload() {
-    return this.submissions.map((sub) => {
+    return this.submissions.map((submission) => {
       const evaluationModel = store.createEvaluationModel({
-        submission: sub,
-        score: this.getScore(sub.id),
-        ratedFamous: this.getIsFamous(sub.id),
+        submission,
+        score: this.getScore(submission.id),
+        ratedFamous: this.getIsFamous(submission.id),
       });
       return getSnapshot(evaluationModel);
     });
   }
 
   updateStore(evaluationsPayloads) {
-    this.submissions.forEach((sub) => {
-      const respectiveEvaluation = evaluationsPayloads.find((ev) => ev.song === sub.song.id);
-      const evaluationModel = store.addEvaluation(respectiveEvaluation);
-      sub.addEvaluation(evaluationModel.id);
+    this.submissions.forEach((submission) => {
+      const submissionEvaluation = evaluationsPayloads
+        .find((evaluation) => evaluation.song === submission.song.id);
+      const evaluationModel = store.addEvaluation(submissionEvaluation);
+      submission.addEvaluation(evaluationModel.id);
       store.ongoingRound.addEvaluation(evaluationModel.id);
     });
   }
 
   evaluationTransaction({
-    roundRef,
+    roundReference,
     submissionsIds,
     evaluations,
     evaluationsIds,
@@ -566,7 +567,7 @@ export default class VotePage extends SuperClass {
           roundEvaluations,
           submissions,
         } = await this.getSubmissionsAndRoundData({
-          roundRef,
+          roundReference,
           submissionsIds,
           transaction,
         });
@@ -578,7 +579,7 @@ export default class VotePage extends SuperClass {
 
         await this.persistUpdatedRound({
           round,
-          roundRef,
+          roundReference,
           roundEvaluations,
           evaluationsIds,
           transaction,
@@ -590,11 +591,11 @@ export default class VotePage extends SuperClass {
   }
 
   async getSubmissionsAndRoundData({
-    roundRef,
+    roundReference,
     submissionsIds,
     transaction,
   }) {
-    const round = await transaction.get(roundRef);
+    const round = await transaction.get(roundReference);
     const roundEvaluations = round.data().evaluations || [];
     const submissions = await this.getSubmissions({
       submissionsIds,
@@ -612,20 +613,21 @@ export default class VotePage extends SuperClass {
     transaction,
   }) {
     return async (submission) => {
-      const subData = submission.data();
-      const subEvaluations = subData.evaluations;
-      const evaluation = evaluations.find((ev) => ev.song === subData.song);
-      const evalRef = this.getEvaluationRef(evaluation.id);
+      const submissionData = submission.data();
+      const oldSubmissionEvaluationsIds = submissionData.evaluations;
+      const newSubmissionEvaluation = evaluations
+        .find((evaluation) => evaluation.song === submissionData.song);
+      const evaluationReference = this.getEvaluationReference(newSubmissionEvaluation.id);
 
       await this.persistUpdatedSubmission({
         submission,
-        subEvaluations,
-        evaluation,
+        oldSubmissionEvaluationsIds,
+        newSubmissionEvaluation,
         transaction,
       });
       await this.persistEvaluation({
-        evaluation,
-        evalRef,
+        evaluation: newSubmissionEvaluation,
+        evaluationReference,
         transaction,
       });
     };
@@ -636,73 +638,73 @@ export default class VotePage extends SuperClass {
     transaction,
   }) {
     return Promise.all(submissionsIds.map(async (id) => {
-      const subRef = this.getSubmissionRef(id);
-      const submission = transaction.get(subRef);
+      const submissionReference = this.getSubmissionReference(id);
+      const submission = transaction.get(submissionReference);
       return submission;
     }));
   }
 
   persistUpdatedSubmission({
     submission,
-    subEvaluations,
-    evaluation,
+    oldSubmissionEvaluationsIds,
+    newSubmissionEvaluation,
     transaction,
   }) {
     return transaction
       .update(
         submission.ref.parent.doc(submission.id),
-        { evaluations: [...subEvaluations, evaluation.id] },
+        { evaluations: [...oldSubmissionEvaluationsIds, newSubmissionEvaluation.id] },
       );
   }
 
   persistEvaluation({
     evaluation,
-    evalRef,
+    evaluationReference,
     transaction,
   }) {
-    return transaction.set(evalRef, evaluation);
+    return transaction.set(evaluationReference, evaluation);
   }
 
   persistUpdatedRound({
     round,
-    roundRef,
+    roundReference,
     roundEvaluations,
     evaluationsIds,
     transaction,
   }) {
     return transaction
-      .update(roundRef, {
+      .update(roundReference, {
         evaluations: [...roundEvaluations, ...evaluationsIds],
         voteCount: round.data().voteCount + 1,
       });
   }
 
   runPostTransactionCleanup() {
-    this.submissions.forEach((sub) => {
-      window.localStorage.removeItem(this.getScoreLocalStorageKey(sub.id));
-      window.localStorage.removeItem(this.getIsFamousLocalStorageKey(sub.id));
+    this.submissions.forEach((submission) => {
+      window.localStorage.removeItem(this.getScoreLocalStorageKey(submission.id));
+      window.localStorage.removeItem(this.getIsFamousLocalStorageKey(submission.id));
     });
   }
 
-  getEvaluationRef(submissionId) {
-    return this.groupRef.collection("evaluations")
+  getEvaluationReference(submissionId) {
+    return this.groupReference.collection("evaluations")
       .doc(submissionId)
       .withConverter(DateConverter);
   }
 
-  getSubmissionRef(submissionId) {
-    return this.groupRef.collection("submissions")
+  getSubmissionReference(submissionId) {
+    return this.groupReference.collection("submissions")
       .doc(submissionId)
       .withConverter(DateConverter);
   }
 
-  getRoundRef(roundId) {
-    return this.groupRef.collection("rounds")
+  getRoundReference(roundId) {
+    return this.groupReference.collection("rounds")
       .doc(roundId)
       .withConverter(DateConverter);
   }
 
-  get groupRef() {
+  get groupReference() {
     return db.collection("groups").doc(store.currentGroup);
   }
 

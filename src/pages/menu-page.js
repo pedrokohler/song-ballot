@@ -1,4 +1,5 @@
 import { LitElement, html, css } from "lit-element";
+import "@appnest/web-router";
 
 const options = [
   { label: "Enviar música", path: "send-song" },

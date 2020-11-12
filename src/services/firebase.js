@@ -24,6 +24,8 @@ export const handleGoogleSignIn = (e) => {
   firebase.auth().signInWithRedirect(provider);
 };
 
+export const logout = () => firebase.auth().signOut();
+
 export const DateConverter = {
   fromFirestore(snapshot, options) {
     const data = snapshot.data(options);

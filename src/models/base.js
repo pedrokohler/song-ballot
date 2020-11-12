@@ -1,7 +1,7 @@
 import { types } from "mobx-state-tree";
 import { v4 as uuid } from "uuid";
 
-export const DefaultModel = types.model({
+export const BaseModel = types.model({
   id: types.optional(types.identifier, () => uuid()),
   createdAt: types.optional(types.Date, () => Date.now()),
 }).postProcessSnapshot((snapshot) => ({
