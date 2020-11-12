@@ -4,8 +4,8 @@ import { getSnapshot } from "mobx-state-tree";
 import "@polymer/paper-progress/paper-progress";
 import "../components/default-background";
 import "../components/alert-modal";
-import forwardArrows from "../images/forward-arrows.png";
-import backwardArrows from "../images/backward-arrows.png";
+import "../components/navigation-buttons";
+
 import { store } from "../store";
 import { db, DateConverter } from "../services/firebase";
 import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
@@ -97,47 +97,6 @@ export default class VotePage extends BaseClass {
           align-items: center;
         }
 
-        .navigation-section {
-            width: 100%;
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-        }
-
-        .navigation-btn {
-            background-color: transparent;
-            border: none;
-            font-family: inherit;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .navigation-btn:focus {
-            outline: none;
-        }
-
-        .navigation-btn:disabled span {
-            color: #CCCCCC;
-            cursor: not-allowed;
-        }
-
-        .navigation-btn:disabled img {
-            filter: invert(91%) hue-rotate(135deg) brightness(92%) contrast(89%);
-        }
-
-        .navigation-section img {
-            width: 15px;
-            height: 15px;
-            vertical-align: middle;
-        }
-
-        .navigation-section span {
-            display: inline;
-            vertical-align: middle;
-            text-transform: uppercase;
-            margin: 0 10px;
-        }
-
         iframe {
             width: 100%;
             height: 300px;
@@ -227,32 +186,38 @@ export default class VotePage extends BaseClass {
           />
           Considero essa música famosa e contra as regras
         </label>
-        <section class="navigation-section">
-            <button
-                ?disabled=${this.submissionIndex <= 0}
-                class="navigation-btn"
-                @click=${() => { this.submissionIndex -= 1; }}
-            >
-                <img src=${backwardArrows} alt="ir para música anterior"/>
-                <span>anterior</span>
-            </button>
-            <button
-                ?hidden=${this.submissionIndex >= this.submissions.length - 1}
-                class="navigation-btn"
-                @click=${() => { this.submissionIndex += 1; }}
-            >
-                <span>próxima</span>
-                <img src=${forwardArrows} alt="ir para próxima música"/>
-            </button>
-            <button
-                ?hidden=${!(this.submissionIndex >= this.submissions.length - 1)}
-                class="navigation-btn"
-                @click=${() => { this.showOverview = true; }}
-            >
-                <span>resumo</span>
-                <img src=${forwardArrows} alt="ver resumo das notas"/>
-            </button>
-        </section>
+        ${this.videoTemplateNavigation()}
+      `;
+  }
+
+  videoTemplateNavigation() {
+    return this.submissionIndex >= this.submissions.length - 1
+      ? html`
+        <navigation-buttons
+          forwardArrowsAlt="ver resumo das notas"
+          forwardArrowsLabel="resumo"
+          ?forwardArrowsDisabled="${false}"
+          @forward-arrows-clicked="${() => { this.showOverview = true; }}"
+
+          backwardArrowsAlt="ir para música anterior"
+          ?backwardArrowsDisabled="${this.submissionIndex <= 0}"
+          @backward-arrows-clicked="${() => { this.submissionIndex -= 1; }}"
+        >
+        </navigation-buttons>
+      `
+      : html`
+        <navigation-buttons
+          forwardArrowsAlt="ir para próxima música"
+          ?forwardArrowsDisabled="${false}"
+          forwardArrowsLabel="próxima"
+          @forward-arrows-clicked="${() => { this.submissionIndex += 1; }}"
+
+          backwardArrowsAlt="ir para música anterior"
+          forwardArrowsLabel="anterior"
+          ?backwardArrowsDisabled="${this.submissionIndex <= 0}"
+          @backward-arrows-clicked="${() => { this.submissionIndex -= 1; }}"
+        >
+        </navigation-buttons>
       `;
   }
 
@@ -264,22 +229,17 @@ export default class VotePage extends BaseClass {
         <label>${this.getIsFamousFromLocalStorage(submission?.id) === "true" ? "Famosa" : ""}</label>
         <hr/>
       `)}
-      <section class="navigation-section">
-          <button
-              class="navigation-btn"
-              @click=${() => { this.showOverview = false; }}
-          >
-              <img src=${backwardArrows} alt="voltar à votação"/>
-              <span>voltar</span>
-          </button>
-          <button
-              class="navigation-btn"
-              @click=${this.handleConfirmationClick.bind(this)}
-              ?disabled=${this.hasOngoingRequest}
-          >
-              <span>confirmar</span>
-          </button>
-      </section>
+      <navigation-buttons
+        forwardArrowsAlt="confirmar voto"
+        forwardArrowsLabel="confirmar"
+        ?forwardArrowsDisabled="${this.hasOngoingRequest}"
+        @forward-arrows-clicked="${this.handleConfirmationClick.bind(this)}"
+
+        backwardArrowsAlt="voltar à votação"
+        ?backwardArrowsDisabled="${this.hasOngoingRequest}"
+        @backward-arrows-clicked="${() => { this.showOverview = false; }}"
+      >
+      </navigation-buttons>
     `;
   }
 

@@ -4,9 +4,8 @@ import "@polymer/paper-progress/paper-progress";
 import "../components/default-background";
 import "../components/alert-modal";
 import "../components/blurred-component";
+import "../components/navigation-buttons";
 
-import forwardArrows from "../images/forward-arrows.png";
-import backwardArrows from "../images/backward-arrows.png";
 import { store } from "../store";
 import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
 import ResultsModalDisplayableMixin from "./mixins/modal-displayable-mixins/results-modal-displayable-mixin";
@@ -89,48 +88,6 @@ export default class ResultsPage extends BaseClass {
             font-weight: 400;
             text-align: left;
             margin-bottom: 1em;
-        }
-
-        .navigation-section {
-            width: 100%;
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            margin-top: 1em;
-        }
-
-        .navigation-btn {
-            background-color: transparent;
-            border: none;
-            font-family: inherit;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .navigation-btn:focus {
-            outline: none;
-        }
-
-        .navigation-btn:disabled span {
-            color: #CCCCCC;
-            cursor: not-allowed;
-        }
-
-        .navigation-btn:disabled img {
-            filter: invert(91%) hue-rotate(135deg) brightness(92%) contrast(89%);
-        }
-
-        .navigation-section img {
-            width: 15px;
-            height: 15px;
-            vertical-align: middle;
-        }
-
-        .navigation-section span {
-            display: inline;
-            vertical-align: middle;
-            text-transform: uppercase;
-            margin: 0 10px;
         }
 
         paper-progress {
@@ -249,47 +206,31 @@ export default class ResultsPage extends BaseClass {
 
   submissionNavigationSectionTemplate() {
     return html`
-      <section class="navigation-section">
-          <button
-              ?disabled=${this.shouldDisablePreviousSubmissionButton()}
-              class="navigation-btn"
-              @click=${() => { this.submissionIndex -= 1; }}
-          >
-              <img src=${backwardArrows} alt="ir para música anterior"/>
-              <span>anterior</span>
-          </button>
-          <button
-              ?disabled=${this.shouldDisableNextSubmissionButton()}
-              class="navigation-btn"
-              @click=${() => { this.submissionIndex += 1; }}
-          >
-              <span>próxima</span>
-              <img src=${forwardArrows} alt="ir para próxima música"/>
-          </button>
-      </section>
+      <navigation-buttons
+        forwardArrowsAlt="ir para próxima música"
+        ?forwardArrowsDisabled="${this.shouldDisableNextSubmissionButton()}"
+        @forward-arrows-clicked="${() => { this.submissionIndex += 1; }}"
+
+        backwardArrowsAlt="ir para música anterior"
+        ?backwardArrowsDisabled="${this.shouldDisablePreviousSubmissionButton()}"
+        @backward-arrows-clicked="${() => { this.submissionIndex -= 1; }}"
+      >
+      </navigation-buttons>
     `;
   }
 
   roundNavigationSectionTemplate() {
     return html`
-      <section class="navigation-section">
-          <button
-              ?disabled=${this.shouldDisablePreviousRoundButton()}
-              class="navigation-btn"
-              @click=${this.onPreviousRoundClick}
-          >
-              <img src=${backwardArrows} alt="ir para música anterior"/>
-              <span>anterior</span>
-          </button>
-          <button
-              ?disabled=${this.shouldDisableNextRoundButton()}
-              class="navigation-btn"
-              @click=${this.onNextRoundClick}
-          >
-              <span>próxima</span>
-              <img src=${forwardArrows} alt="ir para próxima música"/>
-          </button>
-      </section>
+      <navigation-buttons
+        forwardArrowsAlt="ir para próximo round"
+        ?forwardArrowsDisabled="${this.shouldDisableNextRoundButton()}"
+        @forward-arrows-clicked="${this.onNextRoundClick.bind(this)}"
+
+        backwardArrowsAlt="ir para round anterior"
+        ?backwardArrowsDisabled="${this.shouldDisablePreviousRoundButton()}"
+        @backward-arrows-clicked="${this.onPreviousRoundClick.bind(this)}"
+      >
+      </navigation-buttons>
     `;
   }
 
