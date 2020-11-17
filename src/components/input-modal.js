@@ -93,14 +93,14 @@ export default class InputModal extends LitElement {
 
   render() {
     return html`
-            <section class="shell" >
-                <section class="backdrop"></section>
-                <section class="modal">
+            <div class="shell" >
+                <div class="backdrop"></div>
+                <div class="modal">
                     <p><slot></slot></p>
                     <input type="text" @input="${this.handleTextInput}"/>
                     <button @click="${this.handleClick}">ok</button>
-                </section>
-            </section>
+                </div>
+            </div>
         `;
   }
 }

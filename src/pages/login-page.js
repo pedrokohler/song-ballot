@@ -54,8 +54,13 @@ export default class LoginPage extends observer(LitElement) {
     `;
   }
 
+  constructor() {
+    super();
+    this.window = this.ownerDocument.defaultView;
+  }
+
   render() {
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(this.window.location.search);
     const redirectTo = urlParams.get("redirectTo");
 
     if (!store.authStateChecked) {
@@ -82,13 +87,13 @@ export default class LoginPage extends observer(LitElement) {
     if (!store.currentGroup) {
       return html`
       <alert-modal
-        @button-clicked="${() => window.history.pushState(null, "", "logout")}"
+        @button-clicked="${() => this.window.history.pushState(null, "", "logout")}"
       >
         Você precisa ser incluído em um grupo. Solicite a sua inclusão antes de prosseguir.
       </alert-modal>`;
     }
 
-    window.history.pushState(null, "", redirectTo || "menu");
+    this.window.history.pushState(null, "", redirectTo || "menu");
     return "";
   }
 }

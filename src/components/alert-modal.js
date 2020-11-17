@@ -74,13 +74,13 @@ export default class AlertModal extends LitElement {
 
   render() {
     return html`
-            <section class="shell">
-                <section class="backdrop"></section>
-                <section class="modal">
+            <div class="shell">
+                <div class="backdrop"></div>
+                <div class="modal">
                     <p><slot></slot></p>
                     <button @click="${this.handleButtonClick}">ok</button>
-                </section>
-            </section>
+                </div>
+            </div>
         `;
   }
 }

@@ -136,6 +136,7 @@ export default class VotePage extends BaseClass {
 
   constructor() {
     super();
+    this.window = this.ownerDocument.defaultView;
     this.hasOngoingRequest = false;
     this.isLoading = true;
     this.showOverview = false;
@@ -371,7 +372,7 @@ export default class VotePage extends BaseClass {
   }
 
   getScoreFromLocalStorage(id) {
-    const value = window.localStorage.getItem(this.getScoreLocalStorageKey(id));
+    const value = this.window.localStorage.getItem(this.getScoreLocalStorageKey(id));
     return Number(value);
   }
 
@@ -381,7 +382,7 @@ export default class VotePage extends BaseClass {
   }
 
   getIsFamousFromLocalStorage(id) {
-    const value = window.localStorage.getItem(this.getIsFamousLocalStorageKey(id));
+    const value = this.window.localStorage.getItem(this.getIsFamousLocalStorageKey(id));
     return value;
   }
 
@@ -393,7 +394,8 @@ export default class VotePage extends BaseClass {
   }
 
   setCurrentIsFamousInLocalStorage(value) {
-    window.localStorage.setItem(this.getIsFamousLocalStorageKey(this.currentSubmission.id), value);
+    this.window.localStorage
+      .setItem(this.getIsFamousLocalStorageKey(this.currentSubmission.id), value);
   }
 
   setCurrentIsFamousInMemory(value) {
@@ -410,7 +412,8 @@ export default class VotePage extends BaseClass {
   }
 
   setCurrentScoreInLocalStorage(value) {
-    window.localStorage.setItem(this.getScoreLocalStorageKey(this.currentSubmission.id), value);
+    this.window.localStorage
+      .setItem(this.getScoreLocalStorageKey(this.currentSubmission.id), value);
   }
 
   setCurrentScoreInInputField(inputEvent, value) {
@@ -641,8 +644,8 @@ export default class VotePage extends BaseClass {
 
   runPostTransactionCleanup() {
     this.submissions.forEach((submission) => {
-      window.localStorage.removeItem(this.getScoreLocalStorageKey(submission.id));
-      window.localStorage.removeItem(this.getIsFamousLocalStorageKey(submission.id));
+      this.window.localStorage.removeItem(this.getScoreLocalStorageKey(submission.id));
+      this.window.localStorage.removeItem(this.getIsFamousLocalStorageKey(submission.id));
     });
   }
 

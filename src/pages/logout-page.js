@@ -5,7 +5,7 @@ export default class LogoutPage extends LitElement {
   constructor() {
     super();
     logout().then(() => {
-      window.history.pushState(null, "", "");
+      this.ownerDocument.defaultView.history.pushState(null, "", "");
     });
   }
 }
