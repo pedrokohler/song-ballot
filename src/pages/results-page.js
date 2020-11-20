@@ -375,7 +375,7 @@ export default class ResultsPage extends BaseClass {
   }
 
   async maybeLoadNextRound() {
-    await store.fetchNextPaginatedRound(
+    await store.maybeLoadNextPaginatedRound(
       getFirebaseTimestamp(this.currentRound.submissionsStartAt),
     );
   }

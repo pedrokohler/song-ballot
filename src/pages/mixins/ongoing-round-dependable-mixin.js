@@ -18,7 +18,7 @@ export default function OngoingRoundDependableMixin(superClass) {
 
     async refreshOngoingRound() {
       try {
-        await store.getOngoingRound();
+        await store.loadOngoingRound();
       } catch (e) {
         this.safeOpenAlertModal(this.alertCodes.UNEXPECTED_ERROR_GO_MENU,
           `Ocorreu um erro ao carregar a rodada atual: ${e.message}`);
