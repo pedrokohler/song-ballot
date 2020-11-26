@@ -7,10 +7,15 @@ const {
   getUserReference,
   getRoundReference,
   getEvaluationsReference,
-} = require("./helpers/firebase");
-const {
-  getDayOfNextWeekWithTime,
-} = require("./helpers/time");
+  getFirebaseTimestamp,
+} = require("./firebase");
+
+// Domain-specific code is shared between front-end and back-end applications.
+// Firebase functions doesn't support import-export keywords and the front-end app is all based on them.
+// To solve this issue, in the predeploy phase, we run babel and create an updated, compiled,
+// copy of the domain folder in the functions/src folder
+const { getSubmissionsPoints } = require("./domain/aggregates/score");
+const { generateNewRoundPayload } = require("./domain/aggregates/stages");
 
 admin.initializeApp();
 
@@ -35,15 +40,15 @@ exports.getYoutubeTitle = functions.https.onCall((data, context) => {
     const url = getYoutubeApiUrl(videoId, apiKey);
 
     return axios.get(url).then((response) => {
-        const hasFoundSong = !!response.data.items[0];
+      const hasFoundSong = !!response.data.items[0];
 
-        if(hasFoundSong){
-          const { title } = response.data.items[0].snippet;
-          return { title };
-        }
+      if (hasFoundSong) {
+        const { title } = response.data.items[0].snippet;
+        return { title };
+      }
 
-        return { error: "Song not found" };
-      });
+      return { error: "Song not found" };
+    });
   }
   return { error: "Unauthenticated user" }
 });
@@ -58,7 +63,7 @@ exports.controlRoundLifecycle = functions.firestore
       submissions: oldSubmissions,
     } = change.before.data();
 
-    if(oldVoteCount !== voteCount){
+    if (oldVoteCount !== voteCount) {
       await handleNewVote({
         groupId,
         roundId,
@@ -67,7 +72,7 @@ exports.controlRoundLifecycle = functions.firestore
       return;
     }
 
-    if(oldSubmissions.length !== submissions.length){
+    if (oldSubmissions.length !== submissions.length) {
       await handleNewSubmission({
         groupId,
         roundId,
@@ -90,7 +95,7 @@ const handleNewVote = async ({
   const { users, voteCount } = round;
   const everyoneVoted = users.length === voteCount
 
-  if(everyoneVoted) {
+  if (everyoneVoted) {
     await finishRound(groupId, roundId);
   }
 }
@@ -109,84 +114,55 @@ const updateRoundEvaluationsEndAt = async (groupId, roundId) => {
 
 const computeRoundWinner = async (groupId, roundId) => {
   const evaluations = await getEvaluationsReference(groupId)
-  .where("round", "==", roundId)
-  .get();
+    .where("round", "==", roundId)
+    .get();
 
-  const results = evaluations.docs.reduce((results, doc) => {
+  const groupedEvaluations = evaluations.docs.reduce((arr, doc) => {
     const evaluation = doc.data();
     const songId = evaluation.song;
-    if (results[songId]) {
+    const oldArray = arr[songId];
+    if (oldArray) {
       return {
-        ...results,
-        [songId]: updateVoteCounting(results[songId], evaluation)
+        ...arr,
+        [songId]: [...oldArray, evaluation]
       };
-    }
-    return {
-      ...results,
-      [songId]: initializeVoteCounting(evaluation)
+    } else {
+      return {
+        ...arr,
+        [songId]: [evaluation]
+      }
     }
   }, {});
 
-  const lastWinner = Object.values(results).sort((a, b) => b.finalScore - a.finalScore)[0];
-  return lastWinner.user;
+  const results = Array.from(Object.values(groupedEvaluations)).reduce((arr, evaluations) => {
+    const submissionPoints = getSubmissionsPoints(evaluations);
+    const userId = evaluations[0].evaluatee;
+    return [
+      ...arr,
+      {
+        userId,
+        submissionPoints
+      }
+    ];
+  }, []);
+
+  const lastWinner = Object.values(results).sort((a, b) => b.submissionPoints - a.submissionPoints)[0];
+  return lastWinner.userId;
 }
-
-const initializeVoteCounting = (evaluation) => {
-  const penalty = evaluation.ratedFamous ? -1: 0;
-  return {
-    user: evaluation.evaluatee,
-    ratedFamous: evaluation.ratedFamous ? 1 : 0,
-    penalty: penalty,
-    points: evaluation.score,
-    timesVoted: 1,
-    finalScore: evaluation.score + penalty,
-  }
-}
-
-const updateVoteCounting = (lastState, evaluation) => {
-  const points = lastState.points + evaluation.score;
-  const ratedFamous = lastState.ratedFamous + evaluation.ratedFamous ? 1 : 0;
-  const timesVoted = lastState.timesVoted + 1;
-  const penalty = calculatePenalty({ ratedFamous, timesVoted });
-
-  return {
-    ...lastState,
-    points,
-    ratedFamous,
-    timesVoted,
-    penalty,
-    finalScore: calculateFinalScore({ points, timesVoted, penalty }),
-  }
-}
-
-const calculateFinalScore = ({ points, timesVoted, penalty }) => {
-  return Math.round((points / timesVoted + Number.EPSILON) * 100) / 100 + penalty;
-}
-
-const calculatePenalty = ({ ratedFamous, timesVoted }) => {
-  return ratedFamous / timesVoted > 0.5 ? -1 : 0;
-}
-
 
 const startNewRound = async (groupId, lastWinner) => {
-  const now = firebaseNow();
   const groupReference = getGroupReference(groupId);
 
   const group = await groupReference.get();
   const { users } = group.data();
 
-  const round = await groupReference.collection("rounds").add({
-    submissionsStartAt: now,
-    submissionsEndAt: getDayOfNextWeekWithTime("tuesday", 15, 0, 0),
-    evaluationsStartAt: getDayOfNextWeekWithTime("tuesday", 15, 0, 1),
-    evaluationsEndAt: getDayOfNextWeekWithTime("sunday", 23, 0, 0),
-    submissions: [],
-    evaluations: [],
-    songs: [],
-    users: users || [],
-    lastWinner,
-    voteCount: 0
-  });
+  const round = await groupReference.collection("rounds").add(
+    generateNewRoundPayload({
+      users,
+      lastWinner,
+      timestampGenerator: getFirebaseTimestamp
+    })
+  );
 
   await groupReference.update({
     ongoingRound: round.id,
@@ -204,7 +180,7 @@ const handleNewSubmission = async ({
   const submissionsQuantity = submissions.length;
   const submissionsTarget = usersQuantity + (lastWinner ? 1 : 0);
 
-  if(submissionsTarget === submissionsQuantity) {
+  if (submissionsTarget === submissionsQuantity) {
     await startRoundEvaluationPeriod(groupId, roundId);
   }
 }

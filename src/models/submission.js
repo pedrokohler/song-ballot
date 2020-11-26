@@ -6,6 +6,13 @@ import { BaseModel } from "./base";
 import { Song } from "./song";
 import { Round } from "./round";
 
+import {
+  getSubmissionRatedFamousCount,
+  getSubmissionTotalScore,
+  getSubmissionPenalty,
+  getSubmissionsPoints,
+} from "../domain/aggregates/score";
+
 export const Submission = types
   .compose(BaseModel)
   .named("Submission")
@@ -16,30 +23,17 @@ export const Submission = types
     round: types.reference(types.late(() => Round)),
   })
   .views((self) => ({
-    get numberOfEvaluations() {
-      return self.evaluations?.length;
-    },
     get timesRatedFamous() {
-      return self.evaluations
-        ?.reduce((total, evaluation) => (evaluation.ratedFamous ? total + 1 : total), 0);
+      return getSubmissionRatedFamousCount(self.evaluations);
     },
     get total() {
-      return self.evaluations
-        ?.reduce((total, evaluation) => total + evaluation.score, 0);
+      return getSubmissionTotalScore(self.evaluations);
     },
     get penalty() {
-      return self.isFamous ? 1 : 0;
+      return getSubmissionPenalty(self.evaluations);
     },
     get points() {
-      const { penalty } = self;
-      const basePoints = self.numberOfEvaluations
-        ? (self.total / self.numberOfEvaluations + Number.EPSILON)
-        : 0;
-      const roundedPoints = Math.round(100 * basePoints) / 100;
-      return roundedPoints - penalty;
-    },
-    get isFamous() {
-      return self.timesRatedFamous / (self.numberOfEvaluations || 1) > 0.5;
+      return getSubmissionsPoints(self.evaluations);
     },
   }))
   .actions((self) => ({
