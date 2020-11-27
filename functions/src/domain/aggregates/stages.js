@@ -3,32 +3,32 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.canUserSeePartialResults = exports.canUserEvaluate = exports.canUserSendSong = exports.generateNewRoundPayload = exports.hasUserReachedSubmissionLimit = exports.hasUserAlreadyEvaluated = exports.getUserSubmissionsCount = exports.isLastWinner = exports.hasEvaluationsPeriodEnded = exports.hasEvaluationsPeriodStarted = exports.hasSubmissionPeriodStarted = exports.hasSubmissionPeriodEnded = void 0;
+exports.canUserSeePartialResults = exports.canUserEvaluate = exports.canUserSendSong = exports.shouldFinishRound = exports.shouldStartRoundEvaluationPeriod = exports.generateNewRoundPayload = exports.hasUserReachedSubmissionLimit = exports.hasUserAlreadyEvaluated = exports.getUserSubmissionsCount = exports.isLastWinner = exports.hasEvaluationsPeriodEnded = exports.hasEvaluationsPeriodStarted = exports.hasSubmissionPeriodStarted = exports.hasSubmissionPeriodEnded = void 0;
 
 var _utils = require("../../helpers/utils");
 
 var _time = require("../../helpers/time");
 
 var hasSubmissionPeriodEnded = function hasSubmissionPeriodEnded(ongoingRound) {
-  return (0, _utils.now)() > ongoingRound.submissionsEndAt;
+  return (0, _time.now)() > ongoingRound.submissionsEndAt;
 };
 
 exports.hasSubmissionPeriodEnded = hasSubmissionPeriodEnded;
 
 var hasSubmissionPeriodStarted = function hasSubmissionPeriodStarted(ongoingRound) {
-  return (0, _utils.now)() > ongoingRound.submissionsStartAt;
+  return (0, _time.now)() > ongoingRound.submissionsStartAt;
 };
 
 exports.hasSubmissionPeriodStarted = hasSubmissionPeriodStarted;
 
 var hasEvaluationsPeriodStarted = function hasEvaluationsPeriodStarted(ongoingRound) {
-  return (0, _utils.now)() > ongoingRound.evaluationsStartAt;
+  return (0, _time.now)() > ongoingRound.evaluationsStartAt;
 };
 
 exports.hasEvaluationsPeriodStarted = hasEvaluationsPeriodStarted;
 
 var hasEvaluationsPeriodEnded = function hasEvaluationsPeriodEnded(ongoingRound) {
-  return (0, _utils.now)() > ongoingRound.evaluationsEndAt;
+  return (0, _time.now)() > ongoingRound.evaluationsEndAt;
 };
 
 exports.hasEvaluationsPeriodEnded = hasEvaluationsPeriodEnded;
@@ -86,6 +86,27 @@ var generateNewRoundPayload = function generateNewRoundPayload(_ref) {
 };
 
 exports.generateNewRoundPayload = generateNewRoundPayload;
+
+var shouldStartRoundEvaluationPeriod = function shouldStartRoundEvaluationPeriod(round) {
+  var users = round.users,
+      submissions = round.submissions,
+      lastWinner = round.lastWinner;
+  var usersQuantity = users.length;
+  var submissionsQuantity = submissions.length;
+  var submissionsTarget = usersQuantity + (lastWinner ? 1 : 0);
+  return submissionsTarget === submissionsQuantity;
+};
+
+exports.shouldStartRoundEvaluationPeriod = shouldStartRoundEvaluationPeriod;
+
+var shouldFinishRound = function shouldFinishRound(round) {
+  var users = round.users,
+      voteCount = round.voteCount;
+  var everyoneVoted = users.length === voteCount;
+  return everyoneVoted;
+};
+
+exports.shouldFinishRound = shouldFinishRound;
 var canUserSendSong = (0, _utils.and)(hasSubmissionPeriodStarted, (0, _utils.not)(hasSubmissionPeriodEnded), (0, _utils.not)(hasUserReachedSubmissionLimit));
 exports.canUserSendSong = canUserSendSong;
 var canUserEvaluate = (0, _utils.and)(hasEvaluationsPeriodStarted, (0, _utils.not)(hasEvaluationsPeriodEnded), (0, _utils.not)(hasUserAlreadyEvaluated));

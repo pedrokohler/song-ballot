@@ -12,10 +12,14 @@ const {
 
 // Domain-specific code is shared between front-end and back-end applications.
 // Firebase functions doesn't support import-export keywords and the front-end app is all based on them.
-// To solve this issue, in the predeploy phase, we run babel and create an updated, compiled,
-// copy of the domain folder in the functions/src folder
-const { getSubmissionsPoints } = require("./domain/aggregates/score");
-const { generateNewRoundPayload } = require("./domain/aggregates/stages");
+// To solve this issue, in the predeploy phase, we run babel and create an updated compiled copy
+// of the domain folder in the functions/src folder
+const { computeRoundWinner } = require("./domain/aggregates/score");
+const {
+  generateNewRoundPayload,
+  shouldStartRoundEvaluationPeriod,
+  shouldFinishRound,
+} = require("./domain/aggregates/stages");
 
 admin.initializeApp();
 
@@ -92,16 +96,13 @@ const handleNewVote = async ({
   roundId,
   round
 }) => {
-  const { users, voteCount } = round;
-  const everyoneVoted = users.length === voteCount
-
-  if (everyoneVoted) {
+  if (shouldFinishRound(round)) {
     await finishRound(groupId, roundId);
   }
 }
 
 const finishRound = async (groupId, roundId) => {
-  const lastWinner = await computeRoundWinner(groupId, roundId);
+  const lastWinner = await defineRoundWinner(groupId, roundId);
   await updateRoundEvaluationsEndAt(groupId, roundId);
   await startNewRound(groupId, lastWinner);
 }
@@ -112,42 +113,12 @@ const updateRoundEvaluationsEndAt = async (groupId, roundId) => {
   await roundReference.update({ evaluationsEndAt: now });
 }
 
-const computeRoundWinner = async (groupId, roundId) => {
-  const evaluations = await getEvaluationsReference(groupId)
+const defineRoundWinner = async (groupId, roundId) => {
+  const evaluationsSnapshot = await getEvaluationsReference(groupId)
     .where("round", "==", roundId)
     .get();
-
-  const groupedEvaluations = evaluations.docs.reduce((arr, doc) => {
-    const evaluation = doc.data();
-    const songId = evaluation.song;
-    const oldArray = arr[songId];
-    if (oldArray) {
-      return {
-        ...arr,
-        [songId]: [...oldArray, evaluation]
-      };
-    } else {
-      return {
-        ...arr,
-        [songId]: [evaluation]
-      }
-    }
-  }, {});
-
-  const results = Array.from(Object.values(groupedEvaluations)).reduce((arr, evaluations) => {
-    const submissionPoints = getSubmissionsPoints(evaluations);
-    const userId = evaluations[0].evaluatee;
-    return [
-      ...arr,
-      {
-        userId,
-        submissionPoints
-      }
-    ];
-  }, []);
-
-  const lastWinner = Object.values(results).sort((a, b) => b.submissionPoints - a.submissionPoints)[0];
-  return lastWinner.userId;
+  const evaluations = evaluationsSnapshot.docs.map((evaluation) => evaluation.data());
+  return computeRoundWinner(evaluations);
 }
 
 const startNewRound = async (groupId, lastWinner) => {
@@ -174,13 +145,7 @@ const handleNewSubmission = async ({
   roundId,
   round
 }) => {
-  const { users, lastWinner, submissions } = round;
-  const usersQuantity = users.length;
-
-  const submissionsQuantity = submissions.length;
-  const submissionsTarget = usersQuantity + (lastWinner ? 1 : 0);
-
-  if (submissionsTarget === submissionsQuantity) {
+  if(shouldStartRoundEvaluationPeriod(round)){
     await startRoundEvaluationPeriod(groupId, roundId);
   }
 }

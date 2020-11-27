@@ -36,20 +36,35 @@ export const generateNewRoundPayload = ({
   users,
   lastWinner,
   timestampGenerator,
-}) => (
-  {
-    submissionsStartAt: timestampGenerator(),
-    submissionsEndAt: timestampGenerator(getDayOfNextWeekWithTime("tuesday", 15, 0, 0)),
-    evaluationsStartAt: timestampGenerator(getDayOfNextWeekWithTime("tuesday", 15, 0, 1)),
-    evaluationsEndAt: timestampGenerator(getDayOfNextWeekWithTime("sunday", 23, 0, 0)),
-    submissions: [],
-    evaluations: [],
-    songs: [],
-    users: users || [],
-    lastWinner,
-    voteCount: 0,
-  }
-);
+}) => ({
+  submissionsStartAt: timestampGenerator(),
+  submissionsEndAt: timestampGenerator(getDayOfNextWeekWithTime("tuesday", 15, 0, 0)),
+  evaluationsStartAt: timestampGenerator(getDayOfNextWeekWithTime("tuesday", 15, 0, 1)),
+  evaluationsEndAt: timestampGenerator(getDayOfNextWeekWithTime("sunday", 23, 0, 0)),
+  submissions: [],
+  evaluations: [],
+  songs: [],
+  users: users || [],
+  lastWinner,
+  voteCount: 0,
+});
+
+export const shouldStartRoundEvaluationPeriod = (round) => {
+  const { users, submissions, lastWinner } = round;
+  const usersQuantity = users.length;
+
+  const submissionsQuantity = submissions.length;
+  const submissionsTarget = usersQuantity + (lastWinner ? 1 : 0);
+
+  return submissionsTarget === submissionsQuantity;
+};
+
+export const shouldFinishRound = (round) => {
+  const { users, voteCount } = round;
+  const everyoneVoted = users.length === voteCount;
+
+  return everyoneVoted;
+};
 
 export const canUserSendSong = and(
   hasSubmissionPeriodStarted,

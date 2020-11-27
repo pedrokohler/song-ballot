@@ -25,3 +25,40 @@ export const getSubmissionsPoints = (evaluations) => {
 
   return roundedPoints - penalty;
 };
+
+const groupEvaluations = (acc, evaluation) => {
+  const songId = evaluation.song;
+  const oldArray = acc[songId];
+  if (oldArray) {
+    return {
+      ...acc,
+      [songId]: [...oldArray, evaluation],
+    };
+  }
+  return {
+    ...acc,
+    [songId]: [evaluation],
+  };
+};
+
+const computeSubmissionResult = (results, evaluations) => {
+  const submissionPoints = getSubmissionsPoints(evaluations);
+  const userId = evaluations[0].evaluatee;
+  return [
+    ...results,
+    {
+      userId,
+      submissionPoints,
+    },
+  ];
+};
+
+const rankSubmissions = (a, b) => b.submissionPoints - a.submissionPoints;
+
+export const computeRoundWinner = (evaluations) => {
+  const groupedEvaluations = evaluations.reduce(groupEvaluations, {});
+  const results = Array.from(Object.values(groupedEvaluations)).reduce(computeSubmissionResult, []);
+  const lastWinner = Object.values(results).sort(rankSubmissions)[0];
+
+  return lastWinner.userId;
+};

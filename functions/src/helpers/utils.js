@@ -3,13 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.and = exports.not = exports.now = void 0;
-
-var now = function now() {
-  return Date.now();
-};
-
-exports.now = now;
+exports.and = exports.not = void 0;
 
 var not = function not(fn) {
   return function () {

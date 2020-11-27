@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.getDayOfNextWeekWithTime = exports.getNextDayOfWeek = void 0;
+exports.now = exports.getDayOfNextWeekWithTime = exports.getNextDayOfWeek = void 0;
 
 var getNextDayOfWeek = function getNextDayOfWeek(dayName) {
   var excludeToday = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
@@ -25,3 +25,9 @@ var getDayOfNextWeekWithTime = function getDayOfNextWeekWithTime(dayName, hours,
 };
 
 exports.getDayOfNextWeekWithTime = getDayOfNextWeekWithTime;
+
+var now = function now() {
+  return Date.now();
+};
+
+exports.now = now;
