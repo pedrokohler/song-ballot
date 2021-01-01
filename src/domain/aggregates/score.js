@@ -1,3 +1,19 @@
+const MAX_SCORE_ALLOWED = 10;
+const MIN_SCORE_ALLOWED = 1;
+
+export const isValidScore = (value) => (
+  Number.isInteger(value)
+      && value >= MIN_SCORE_ALLOWED
+      && value <= MAX_SCORE_ALLOWED
+);
+
+export const adjustScoreValue = (value) => {
+  const max = MAX_SCORE_ALLOWED;
+  const min = MIN_SCORE_ALLOWED;
+  const roundedValue = Math.round(value);
+  return Math.max(min, Math.min(max, roundedValue));
+};
+
 export const getSubmissionRatedFamousCount = (evaluations) => evaluations
   .filter((evaluation) => evaluation.ratedFamous)
   .length;
@@ -42,18 +58,31 @@ const groupEvaluations = (acc, evaluation) => {
 };
 
 const computeSubmissionResult = (results, evaluations) => {
-  const submissionPoints = getSubmissionsPoints(evaluations);
+  const points = getSubmissionsPoints(evaluations);
+  const timesRatedFamous = getSubmissionRatedFamousCount(evaluations);
   const userId = evaluations[0].evaluatee;
   return [
     ...results,
     {
       userId,
-      submissionPoints,
+      points,
+      timesRatedFamous,
     },
   ];
 };
 
-const rankSubmissions = (a, b) => b.submissionPoints - a.submissionPoints;
+const computeSortIndexForRatedFamous = (a, b) => (
+  a.timesRatedFamous < b.timesRatedFamous
+    ? -1
+    : 1
+);
+
+export const rankSubmissions = (a, b) => {
+  if (b.points === a.points) {
+    return computeSortIndexForRatedFamous(a, b);
+  }
+  return b.points - a.points;
+};
 
 export const computeRoundWinner = (evaluations) => {
   const groupedEvaluations = evaluations.reduce(groupEvaluations, {});

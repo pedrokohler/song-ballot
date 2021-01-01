@@ -8,10 +8,11 @@ import "../components/navigation-buttons";
 
 import { store } from "../store";
 import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
-import ResultsModalDisplayableMixin from "./mixins/modal-displayable-mixins/results-modal-displayable-mixin";
+import ModalDisplayableMixin from "./mixins/modal-displayable-mixin";
 import { getFirebaseTimestamp } from "../services/firebase";
+import { rankSubmissions } from "../domain/aggregates/score";
 
-const BaseClass = ResultsModalDisplayableMixin(
+const BaseClass = ModalDisplayableMixin(
   OngoingRoundDependableMixin(
     LitElement,
   ),
@@ -347,7 +348,7 @@ export default class ResultsPage extends BaseClass {
   updateSubmissions(roundId) {
     this.submissions = Array
       .from(store.rounds.get(roundId)?.submissions?.values())
-      .sort((a, b) => b.points - a.points);
+      .sort(rankSubmissions);
   }
 
   getDirectYoutubeUrl(id) {

@@ -1,13 +1,13 @@
 import { observer } from "mobx-lit-element";
 import { store } from "../../store";
-import DefaultModalDisplayableMixin from "./modal-displayable-mixins/default-modal-displayable-mixin";
+import ModalDisplayableMixin from "./modal-displayable-mixin";
 
 export default function OngoingRoundDependableMixin(superClass) {
   const observedSuperClass = observer(superClass);
 
   const SuperClass = superClass.isPrototypeOfModalDisplayableMixin
     ? observedSuperClass
-    : DefaultModalDisplayableMixin(observedSuperClass);
+    : ModalDisplayableMixin(observedSuperClass);
   return class OngoingRoundDependable extends SuperClass {
     async firstUpdated(changedProperties) {
       super.firstUpdated(changedProperties);

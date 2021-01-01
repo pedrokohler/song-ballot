@@ -4,6 +4,7 @@ import { User } from "./user";
 import { Song } from "./song";
 import { Submission } from "./submission";
 import { Evaluation } from "./evaluation";
+import { rankSubmissions } from "../domain/aggregates/score";
 
 export const Round = types.model({
   id: types.identifier,
@@ -25,7 +26,7 @@ export const Round = types.model({
   evaluationsEndAt: new Date(snapshot.evaluationsEndAt),
 })).views((self) => ({
   get playerRanking() {
-    return self.submissions?.slice().sort((a, b) => b.points - a.points);
+    return self.submissions?.slice().sort(rankSubmissions);
   },
   get firstPlace() {
     return self.playerRanking?.[0];

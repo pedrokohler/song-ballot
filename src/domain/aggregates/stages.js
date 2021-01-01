@@ -1,6 +1,9 @@
 import { not, and } from "../../helpers/utils";
 import { getDayOfNextWeekWithTime, now } from "../../helpers/time";
 
+const USER_SUBMISSION_LIMIT_REGULAR = 1;
+const USER_SUBMISSION_LIMIT_LAST_WINNER = 2;
+
 export const hasSubmissionPeriodEnded = (ongoingRound) => now()
   > ongoingRound.submissionsEndAt;
 
@@ -27,9 +30,9 @@ export const hasUserAlreadyEvaluated = (ongoingRound, user) => Array
 export const hasUserReachedSubmissionLimit = (ongoingRound, user) => {
   const userSubmissionCount = getUserSubmissionsCount(ongoingRound, user);
   if (isLastWinner(ongoingRound, user)) {
-    return userSubmissionCount >= 2;
+    return userSubmissionCount >= USER_SUBMISSION_LIMIT_LAST_WINNER;
   }
-  return userSubmissionCount >= 1;
+  return userSubmissionCount >= USER_SUBMISSION_LIMIT_REGULAR;
 };
 
 export const generateNewRoundPayload = ({
