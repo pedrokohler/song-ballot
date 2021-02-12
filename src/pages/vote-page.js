@@ -8,6 +8,7 @@ import "../components/navigation-buttons";
 import OngoingRoundDependableMixin from "./mixins/ongoing-round-dependable-mixin";
 import ModalDisplayableMixin from "./mixins/modal-displayable-mixin";
 import VoteAggregateMixin from "./mixins/aggregates/vote-aggregate";
+import { MAX_SCORE_ALLOWED, MIN_SCORE_ALLOWED } from "../domain/aggregates/score";
 
 const BaseClass = VoteAggregateMixin(
   ModalDisplayableMixin(
@@ -140,7 +141,7 @@ export default class VotePage extends BaseClass {
         <h4 class="song-title">${this.currentSubmission.song.title}</h4>
         <iframe src=${this.currentSubmission.song.url} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         <input
-            type="number" max="10" min="1"
+            type="number" max=${MAX_SCORE_ALLOWED} min=${MIN_SCORE_ALLOWED}
             @input=${this.handleScoreInput}
             .value=${this.score}
         />

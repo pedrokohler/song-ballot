@@ -9,7 +9,7 @@ The game is simple:
 
 1- Every week each participant registers a song
 
-2- Each participant evaluates all but his songs with 1 to 10 points
+2- Each participant evaluates all but his own songs with a number ranging from 1 to 100
 
 3- The best scoring song wins. The person who sent the song can send an extra song the next week
 
@@ -18,11 +18,17 @@ The game is simple:
 Clone the repository and install the dependencies
 ```
 git clone https://github.com/pedrokohler/song-ballot.git
+cd ./song-ballot
 yarn install
 ```
-Go into the project's folder and create a dist folder
+After that, install the dependencies inside the functions folder. Note that you must use node version 10.10
 ```
-cd song-ballot
+cd ./functions
+nvm use 10.10
+yarn install
+```
+In the project's root folder and create a dist folder. Remember to change the node version to the latest.
+```
 mkdir dist
 ```
 Create and configure the gh-pages branch

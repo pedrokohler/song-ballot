@@ -1,5 +1,6 @@
-const MAX_SCORE_ALLOWED = 10;
-const MIN_SCORE_ALLOWED = 1;
+export const MAX_SCORE_ALLOWED = 100;
+export const MIN_SCORE_ALLOWED = 1;
+const FAMOUS_SUBMISSION_PENALTY = MAX_SCORE_ALLOWED * 0.1;
 
 export const isValidScore = (value) => (
   Number.isInteger(value)
@@ -26,7 +27,7 @@ export const isSubmissionFamous = (evaluations) => getSubmissionRatedFamousCount
   > 0.5;
 
 export const getSubmissionPenalty = (evaluations) => (isSubmissionFamous(evaluations)
-  ? 1
+  ? FAMOUS_SUBMISSION_PENALTY
   : 0);
 
 export const getSubmissionsPoints = (evaluations) => {
@@ -41,6 +42,17 @@ export const getSubmissionsPoints = (evaluations) => {
 
   return roundedPoints - penalty;
 };
+
+// const getVoteMap = (evaluations) => {
+//   const mapInitializer = evaluations.reduce((initializer, evaluation) => {
+//     const evaluationEntry = [evaluation.evaluatee, evaluation.score];
+//     return [
+//       ...initializer,
+//       evaluationEntry,
+//     ];
+//   }, []);
+//   return new Map(mapInitializer);
+// };
 
 const groupEvaluations = (acc, evaluation) => {
   const songId = evaluation.song;
@@ -61,25 +73,42 @@ const computeSubmissionResult = (results, evaluations) => {
   const points = getSubmissionsPoints(evaluations);
   const timesRatedFamous = getSubmissionRatedFamousCount(evaluations);
   const userId = evaluations[0].evaluatee;
+  // const voteMap = getVoteMap(evaluations);
   return [
     ...results,
     {
       userId,
       points,
       timesRatedFamous,
+      // voteMap,
     },
   ];
 };
 
-const computeSortIndexForRatedFamous = (a, b) => (
-  a.timesRatedFamous < b.timesRatedFamous
-    ? -1
-    : 1
-);
+const computeSortIndexForRatedFamousTieBreaker = (a, b) => {
+  if (a.timesRatedFamous < b.timesRatedFamous) {
+    return -1;
+  } if (a.timesRatedFamous > b.timesRatedFamous) {
+    return 1;
+  }
+  return 0;
+};
+
+// const computeSortIndexForIgnoreOpponentScoreTieBreaker = (a, b) => (
+//   a.voteMap.get(b.userId) < b.voteMap.get(a.userId)
+//     ? 1
+//     : -1
+// );
 
 export const rankSubmissions = (a, b) => {
   if (b.points === a.points) {
-    return computeSortIndexForRatedFamous(a, b);
+    const ratedFamousSortIndex = computeSortIndexForRatedFamousTieBreaker(a, b);
+    // To add the following tie breaker we must change the submission data structure
+    // so that the submission also has the voting information within itself
+    // if (ratedFamousSortIndex === 0) {
+    //   return computeSortIndexForIgnoreOpponentScoreTieBreaker(a, b);
+    // }
+    return ratedFamousSortIndex;
   }
   return b.points - a.points;
 };
