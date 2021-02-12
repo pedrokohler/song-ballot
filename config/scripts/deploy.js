@@ -1,10 +1,10 @@
 /* eslint-disable no-console */
-const { exec } = require('child_process');
+const { exec } = require("child_process");
 
 const message = process.argv[2];
 
 if (!message) {
-  console.log('Insert a message for your deploy');
+  console.log("Insert a message for your deploy");
   process.exit(1);
 }
 

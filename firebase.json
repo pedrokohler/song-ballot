@@ -1,8 +1,8 @@
 {
   "functions": {
     "predeploy": [
-      "babel 'src/domain' --out-dir 'functions/src/domain'",
-      "babel 'src/helpers' --out-dir 'functions/src/helpers'"
+      "npx babel 'src/domain' --out-dir 'functions/src/domain'",
+      "npx babel 'src/helpers' --out-dir 'functions/src/helpers'"
     ]
   }
 }
