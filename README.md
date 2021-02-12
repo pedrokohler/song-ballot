@@ -21,11 +21,12 @@ git clone https://github.com/pedrokohler/song-ballot.git
 cd ./song-ballot
 yarn install
 ```
-After that, install the dependencies inside the functions folder. Note that you must use node version 10.10
+After that, install the dependencies inside the functions folder. Note that you must use node version 10.10. Also, install firebase-tools globally.
 ```
 cd ./functions
 nvm use 10.10
 yarn install
+yarn global add firebase-tools@8.8.1
 ```
 In the project's root folder and create a dist folder. Remember to change the node version to the latest.
 ```
