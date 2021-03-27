@@ -151,7 +151,7 @@ export default class VotePage extends BaseClass {
             @change=${this.handleIsFamousInput}
             .checked=${this.isFamous}
           />
-          Considero essa música famosa e contra as regras
+          Eu já escutei essa música
         </label>
         ${this.videoTemplateNavigation()}
       `;
