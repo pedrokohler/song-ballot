@@ -29,9 +29,9 @@ yarn install
 yarn global add firebase-tools@8.8.1
 ```
 
-To deploy firebase functions, first add the youtube.key variable
+To deploy firebase functions, first add the youtube.key and the telegram.bot.key variables
 ```
-firebase functions:config:set youtube.key="YOUR_KEY"
+firebase functions:config:set youtube.key="YOUR_YOUTUBE_API_KEY" telegram.bot.key="YOUR_TELEGRAM_BOT_KEY"
 ```
 Remember to change back the node version to the latest if you go back to the project root.
 
