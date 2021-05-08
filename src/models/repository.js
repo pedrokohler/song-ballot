@@ -12,6 +12,9 @@ export const Repository = types.model("respository").actions((self) => ({
   getGroupReference(groupId) {
     return db.collection("groups").doc(groupId);
   },
+  getUserReference(userId) {
+    return db.collection("users").doc(userId);
+  },
   getRoundReference(groupId, roundId) {
     return self
       .getGroupReference(groupId)

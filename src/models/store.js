@@ -113,6 +113,17 @@ export const RootStore = types
       yield self.loadRoundSubmissions(roundId);
       yield self.loadRoundEvaluations(roundId);
     }),
+    setTelegramChatId: flow(function* setTelegramChatId(telegramChatId) {
+      const { groups: groupIds, telegramChatId: oldChatId } = self.currentUser;
+      yield Promise.all(groupIds.map(async (groupId) => {
+        const groupData = await self.fetchGroup(groupId);
+        const otherChatIds = groupData.telegramChatIds.filter((id) => id !== oldChatId);
+        const newChatIds = [...otherChatIds, telegramChatId];
+        return self.getGroupReference(groupId).update({ telegramChatIds: newChatIds });
+      }));
+      yield self.getUserReference(self.currentUser.id).update({ telegramChatId });
+      self.currentUser.telegramChatId = telegramChatId;
+    }),
     maybeLoadNextPaginatedRound: flow(function* maybeLoadNextPaginatedRound(startAfter) {
       const round = yield self.fetchNextPaginatedRound(self.currentGroup, startAfter);
 

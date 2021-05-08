@@ -33,6 +33,11 @@ customElements.whenDefined("router-slot").then(async () => {
       guards: [sessionGuard],
     },
     {
+      path: "bot-settings",
+      component: () => import("./pages/bot-settings-page"),
+      guards: [sessionGuard],
+    },
+    {
       path: "logout",
       component: () => import("./pages/logout-page"),
       guards: [sessionGuard],

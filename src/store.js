@@ -16,10 +16,10 @@ firebase.auth().onAuthStateChanged((user) => {
       const data = doc.data();
       if (data) {
         const {
-          photoURL, displayName, email, groups,
+          photoURL, displayName, email, groups, telegramChatId,
         } = data;
         store.setCurrentUser({
-          photoURL, displayName, id: uid, email, groups: groups || [],
+          photoURL, displayName, id: uid, email, groups: groups || [], telegramChatId,
         });
         // @todo fix this so that user can select group
         store.setCurrentGroup(groups[0]);
@@ -30,6 +30,7 @@ firebase.auth().onAuthStateChanged((user) => {
           displayName,
           id: uid,
           email,
+          telegramChatId: null,
           groups: [], // @todo must assure that there's a group
         });
       }

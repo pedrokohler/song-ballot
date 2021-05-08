@@ -22,6 +22,8 @@ export default function ModalDisplaybleMixin(superClass) {
         DUPLICATED_SONG: "duplicated-song",
         UNEXPECTED_ERROR_GO_MENU: "unexpected-error-go-menu",
         UNEXPECTED_ERROR_CLOSE_MODAL: "unexpected-error-close-modal",
+        SAVE_BOT_SETTINGS_ERROR: "save-bot-settings-error",
+        SAVE_BOT_SETTINGS_SUCCESS: "save-bot-settings-success",
       };
     }
 
@@ -115,6 +117,20 @@ export default function ModalDisplaybleMixin(superClass) {
               : ""}`;
           },
           onButtonClicked: this.goToMenu,
+        }],
+        [this.alertCodes.SAVE_BOT_SETTINGS_SUCCESS, {
+          needsErrorMessage: false,
+          messageGenerator() {
+            return "Suas configurações do Bot foram salvas com sucesso!";
+          },
+          onButtonClicked: this.goToMenu,
+        }],
+        [this.alertCodes.SAVE_BOT_SETTINGS_ERROR, {
+          needsErrorMessage: false,
+          messageGenerator() {
+            return "Houve um problema ao salvar as suas configurações do Bot.";
+          },
+          onButtonClicked: this.closeModal,
         }],
         [this.alertCodes.DUPLICATED_SONG, {
           needsErrorMessage: false,

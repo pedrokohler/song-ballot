@@ -6,4 +6,5 @@ export const User = types.model("User", {
   email: types.string,
   photoURL: types.string,
   groups: types.array(types.string),
+  telegramChatId: types.maybeNull(types.string),
 });

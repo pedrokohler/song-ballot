@@ -24,11 +24,14 @@ const getRoundReference = getDocReference("rounds");
 
 const getEvaluationsReference = getCollectionReference("evaluations");
 
+const getSubmissionsReference = getCollectionReference("submissions");
+
 module.exports = {
   now,
   getUserReference,
   getGroupReference,
   getRoundReference,
   getEvaluationsReference,
+  getSubmissionsReference,
   getFirebaseTimestamp,
 };
