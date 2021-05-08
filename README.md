@@ -28,37 +28,12 @@ nvm use 10.10
 yarn install
 yarn global add firebase-tools@8.8.1
 ```
-In the project's root folder and create a dist folder. Remember to change the node version to the latest.
-```
-mkdir dist
-```
-Create and configure the gh-pages branch
-```
-# Create an orphan branch named gh-pages
-git checkout --orphan gh-pages
-
-# Remove all files from staging
-git rm -rf .
-
-# Create an empty commit so that you will be able to push on the branch next
-git commit --allow-empty -m "Init empty branch"
-
-# Push the branch
-git push origin gh-pages
-
-# Come back to master
-git checkout master
-
-git worktree add dist gh-pages
-```
-
-If your source control changes are full of wrong updates, just restart your IDE and it'll work fine.
 
 To deploy firebase functions, first add the youtube.key variable
 ```
-cd ./functions
 firebase functions:config:set youtube.key="YOUR_KEY"
 ```
+Remember to change back the node version to the latest if you go back to the project root.
 
 Before starting the app you should create your .env and .env.development files in the root folder, filling it up with the following keys
 
@@ -102,7 +77,7 @@ cd dist && http-server
 ### Deploy
 
 ```
-yarn deploy "message here"
+yarn deploy
 ```
 
-Will deploy the application commiting the gh-pages and pushing it to origin with the message you insert.
+Will deploy the application commiting the gh-pages and pushing it to origin.

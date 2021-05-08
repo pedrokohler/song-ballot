@@ -9,7 +9,7 @@
     "start": "cross-env NODE_ENV=development webpack-dev-server --config config/webpack.dev.js",
     "start:as:production": "cross-env NODE_ENV=production webpack-dev-server --config config/webpack.local.production.js",
     "build": "cross-env NODE_ENV=production webpack --config config/webpack.prod.js",
-    "deploy": "node ./config/scripts/deploy.js",
+    "deploy": "yarn build && gh-pages -d dist",
     "deploy:functions:dev": "node ./functions/scripts/deploy-dev.js",
     "deploy:functions": "node ./functions/scripts/deploy.js"
   },
@@ -30,6 +30,7 @@
     "eslint": "7.11.0",
     "eslint-loader": "4.0.0",
     "file-loader": "6.0.0",
+    "gh-pages": "^3.1.0",
     "html-webpack-plugin": "4.0.4",
     "mini-css-extract-plugin": "0.9.0",
     "node-sass": "4.13.1",
