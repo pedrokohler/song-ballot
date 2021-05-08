@@ -9,7 +9,7 @@ import { store } from "../store";
 
 const BaseClass = ModalDisplayableMixin(LitElement);
 
-export default class SendSongPage extends BaseClass {
+export default class BotSettingsPage extends BaseClass {
   static get styles() {
     return css`
         section {
@@ -144,4 +144,4 @@ export default class SendSongPage extends BaseClass {
   }
 }
 
-window.customElements.define("bot-settings-page", SendSongPage);
+window.customElements.define("bot-settings-page", BotSettingsPage);
