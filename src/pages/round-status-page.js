@@ -42,8 +42,19 @@ export default class RoundStatusPage extends BaseClass {
 
         h1,h2,h4,h5,h6,p {
             margin-top: 0;
-            margin-bottom: 0.6em;
             text-align: center;
+        }
+
+        p {
+          margin-bottom: 1.5em;
+        }
+
+        table p {
+          margin-bottom: 0.6em;
+        }
+
+        h5 {
+          margin-bottom: 0.6em;
         }
 
         h4 {
@@ -63,6 +74,7 @@ export default class RoundStatusPage extends BaseClass {
 
         button {
             margin-bottom: 1em;
+            margin-top: 1em;
             width: 100px;
             height: 35px;
             text-transform: uppercase;
