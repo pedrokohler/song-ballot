@@ -452,7 +452,7 @@ export default function VoteAggregateMixin(baseClass) {
     }
 
     get groupReference() {
-      return db.collection("groups").doc(store.currentGroup);
+      return db.collection("groups").doc(store.currentGroup.id);
     }
 
     get currentSubmission() {

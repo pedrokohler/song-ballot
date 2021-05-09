@@ -8,6 +8,7 @@ import { Evaluation } from "./evaluation";
 import { Round } from "./round";
 import { BaseModel } from "./base";
 import { Repository } from "./repository";
+import { Group } from "./group";
 
 export const RootStore = types
   .compose(
@@ -18,10 +19,11 @@ export const RootStore = types
   .props({
     authStateChecked: types.boolean,
     currentUser: types.maybeNull(types.reference(User)),
-    currentGroup: types.maybeNull(types.string),
+    currentGroup: types.maybeNull(types.reference(Group)),
     ongoingRound: types.maybe(types.reference(Round)),
     users: types.map(User),
     songs: types.map(Song),
+    groups: types.map(Group),
     submissions: types.map(Submission),
     evaluations: types.map(Evaluation),
     rounds: types.map(Round),
@@ -94,16 +96,17 @@ export const RootStore = types
       self.ongoingRound = id;
     },
     loadOngoingRound: flow(function* loadOngoingRound() {
-      const { currentGroup } = self;
-      const { ongoingRound: ongoingRoundId } = yield self.fetchGroup(currentGroup);
+      const { ongoingRound: ongoingRoundId, id: currentGroupId } = self.currentGroup;
 
-      const round = yield self.fetchRound(currentGroup, ongoingRoundId);
+      const round = yield self.fetchRound(currentGroupId, ongoingRoundId);
       yield self.loadRound(round);
       self.setOngoingRound(ongoingRoundId);
     }),
-    setCurrentGroup(id) {
+    setCurrentGroup: flow(function* loadCurrentGroup(id) {
+      const { name, ongoingRound } = yield self.fetchGroup(id);
+      self.groups.set(id, { id, name, ongoingRound });
       self.currentGroup = id;
-    },
+    }),
     loadRound: flow(function* loadRound(round) {
       const { id: roundId } = round;
 
@@ -125,7 +128,7 @@ export const RootStore = types
       self.currentUser.telegramChatId = telegramChatId;
     }),
     maybeLoadNextPaginatedRound: flow(function* maybeLoadNextPaginatedRound(startAfter) {
-      const round = yield self.fetchNextPaginatedRound(self.currentGroup, startAfter);
+      const round = yield self.fetchNextPaginatedRound(self.currentGroup.id, startAfter);
 
       if (round) {
         yield self.loadRound(round);
@@ -149,15 +152,15 @@ export const RootStore = types
       users.forEach((user) => self.addUser(user));
     }),
     loadRoundSongs: flow(function* loadRoundSongs(roundId) {
-      const songs = yield self.fetchRoundSongs(self.currentGroup, roundId);
+      const songs = yield self.fetchRoundSongs(self.currentGroup.id, roundId);
       songs.forEach((song) => self.addSong(song));
     }),
     loadRoundSubmissions: flow(function* loadRoundSubmissions(roundId) {
-      const submissions = yield self.fetchRoundSubmissions(self.currentGroup, roundId);
+      const submissions = yield self.fetchRoundSubmissions(self.currentGroup.id, roundId);
       submissions.forEach((submission) => self.addSubmission(submission));
     }),
     loadRoundEvaluations: flow(function* loadRoundEvaluations(roundId) {
-      const evaluations = yield self.fetchRoundEvaluations(self.currentGroup, roundId);
+      const evaluations = yield self.fetchRoundEvaluations(self.currentGroup.id, roundId);
       evaluations.forEach((evaluation) => self.addEvaluation(evaluation));
     }),
   }));

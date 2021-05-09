@@ -5,7 +5,7 @@ const options = [
   { label: "Enviar música", path: "send-song" },
   { label: "Votar", path: "vote" },
   { label: "Resultado", path: "results" },
-  { label: "Status da Rodada", path: "round-status" },
+  { label: "Status do Grupo", path: "group-status" },
   { label: "Configurações do Bot", path: "bot-settings" },
   // { label: "Histórico", path: "" },
   // { label: "Favoritas", path: "" },

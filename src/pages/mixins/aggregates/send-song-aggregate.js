@@ -203,7 +203,7 @@ export default function SendSongAggregateMixin(baseClass) {
 
     async isSongInDb(videoId) {
       const song = await db.collection("groups")
-        .doc(store.currentGroup)
+        .doc(store.currentGroup.id)
         .collection("songs")
         .doc(videoId)
         .get();
@@ -320,7 +320,7 @@ export default function SendSongAggregateMixin(baseClass) {
     }
 
     get groupReference() {
-      return db.collection("groups").doc(store.currentGroup);
+      return db.collection("groups").doc(store.currentGroup.id);
     }
 
     get videoURL() {

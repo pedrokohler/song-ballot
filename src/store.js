@@ -12,7 +12,7 @@ window.store = store;
 firebase.auth().onAuthStateChanged((user) => {
   if (user) {
     const { uid } = user;
-    db.collection("users").doc(uid).get().then((doc) => {
+    db.collection("users").doc(uid).get().then(async (doc) => {
       const data = doc.data();
       if (data) {
         const {
@@ -21,8 +21,8 @@ firebase.auth().onAuthStateChanged((user) => {
         store.setCurrentUser({
           photoURL, displayName, id: uid, email, groups: groups || [], telegramChatId,
         });
+        await store.setCurrentGroup(groups[0]);
         // @todo fix this so that user can select group
-        store.setCurrentGroup(groups[0]);
       } else { // first log in
         const { photoURL, displayName, email } = user;
         store.setCurrentUser({

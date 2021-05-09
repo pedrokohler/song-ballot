@@ -33,8 +33,8 @@ customElements.whenDefined("router-slot").then(async () => {
       guards: [sessionGuard],
     },
     {
-      path: "round-status",
-      component: () => import("./pages/round-status-page"),
+      path: "group-status",
+      component: () => import("./pages/group-status-page"),
       guards: [sessionGuard],
     },
     {

@@ -11,6 +11,7 @@ import {
   hasUserReachedSubmissionLimit,
   hasUserAlreadyEvaluated,
   hasSubmissionPeriodEnded,
+  hasEvaluationsPeriodEnded,
 } from "../domain/aggregates/stages";
 
 const BaseClass = ModalDisplayableMixin(
@@ -19,7 +20,7 @@ const BaseClass = ModalDisplayableMixin(
   ),
 );
 
-export default class RoundStatusPage extends BaseClass {
+export default class GroupStatusPage extends BaseClass {
   static get styles() {
     return css`
         section {
@@ -104,7 +105,7 @@ export default class RoundStatusPage extends BaseClass {
     return html`
         <default-background>
             <section>
-                ${this.roundStatusTemplate()}
+                ${this.groupStatusTemplate()}
                 <div>
                   <button
                     @click="${this.handleGoBackClick}"
@@ -116,17 +117,22 @@ export default class RoundStatusPage extends BaseClass {
     `;
   }
 
-  roundStatusTemplate() {
+  groupStatusTemplate() {
     return html`
-      <h4>Rodada ${this.startDate}</h4>
+      <h4>${store.currentGroup.name}</h4>
+      <h5>Rodada ${this.startDate}</h5>
+      <p></p>
       <h5>Último ganhador</h5>
       <p>${store.ongoingRound.lastWinner.displayName}</p>
       <h5>Fase atual</h5>
-      <p>${hasSubmissionPeriodEnded(store.ongoingRound) ? "Votação" : "Envio de músicas"}</p>
+      <p>${this.getCurrentRoundPhase()}</p>
+      <h5>Limite da fase atual</h5>
+      <p>${this.getCurrentRoundPhaseLimit()}</p>
       <table>
           <thead>
             <tr>
               <th><h5>Usuário</h5></th>
+              <th><h5>Notificações?</h5></th>
               <th><h5>Enviou?</h5></th>
               <th><h5>Votou?</h5></th>
             </tr>
@@ -139,13 +145,17 @@ export default class RoundStatusPage extends BaseClass {
   }
 
   tableRowTemplate(user) {
-    const { displayName } = user;
+    const { displayName, telegramChatId } = user;
+    const receivesNotification = !!telegramChatId;
     const alreadySentAllSongs = hasUserReachedSubmissionLimit(store.ongoingRound, user);
     const alreadyHasEvaluated = hasUserAlreadyEvaluated(store.ongoingRound, user);
     return html`
       <tr>
         <td>
           <p style="text-align: left">${displayName}</p>
+        </td>
+        <td>
+          <p>${receivesNotification ? "✔" : ""}</p>
         </td>
         <td>
           <p>${alreadySentAllSongs ? "✔" : ""}</p>
@@ -175,14 +185,62 @@ export default class RoundStatusPage extends BaseClass {
     this.isLoading = false;
   }
 
+  getCurrentRoundPhase() {
+    const submissionsEnded = hasSubmissionPeriodEnded(store.ongoingRound);
+    const evaluationsEnded = hasEvaluationsPeriodEnded(store.ongoingRound);
+    if (evaluationsEnded) {
+      return "Rodada terminou por tempo";
+    }
+    return submissionsEnded ? "Votação" : "Envio de músicas";
+  }
+
+  getCurrentRoundPhaseLimit() {
+    if (this.getCurrentRoundPhase() === "Envio de músicas") {
+      return this.submissionEndTime;
+    }
+
+    if (this.getCurrentRoundPhase() === "Votação") {
+      return this.evaluationsEndTime;
+    }
+
+    return "Rodada expirada";
+  }
+
   handleGoBackClick() {
     this.ownerDocument.defaultView.history.replaceState(null, "", "menu");
+  }
+
+  trasnformToFirstCapitalLetter(string) {
+    return string.slice(0, 1).toUpperCase() + string.slice(1);
   }
 
   get startDate() {
     const { submissionsStartAt } = store.ongoingRound;
     return submissionsStartAt.toLocaleDateString();
   }
+
+  get localeOptions() {
+    return {
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
+      weekday: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+    };
+  }
+
+  get submissionEndTime() {
+    const { submissionsEndAt } = store.ongoingRound;
+    const timeString = submissionsEndAt.toLocaleString(undefined, this.localeOptions);
+    return this.trasnformToFirstCapitalLetter(timeString);
+  }
+
+  get evaluationsEndTime() {
+    const { evaluationsEndAt } = store.ongoingRound;
+    const timeString = evaluationsEndAt.toLocaleString(undefined, this.localeOptions);
+    return this.trasnformToFirstCapitalLetter(timeString);
+  }
 }
 
-window.customElements.define("round-status-page", RoundStatusPage);
+window.customElements.define("group-status-page", GroupStatusPage);
