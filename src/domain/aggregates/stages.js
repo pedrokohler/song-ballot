@@ -16,7 +16,7 @@ export const hasEvaluationsPeriodStarted = (ongoingRound) => now()
 export const hasEvaluationsPeriodEnded = (ongoingRound) => now()
   > ongoingRound.evaluationsEndAt;
 
-export const isLastWinner = (ongoingRound, user) => ongoingRound.lastWinner.id === user.id;
+export const isLastWinner = (ongoingRound, user) => ongoingRound.lastWinner?.id === user.id;
 
 export const getUserSubmissionsCount = (ongoingRound, user) => Array
   .from(ongoingRound.submissions.values())

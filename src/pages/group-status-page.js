@@ -123,7 +123,7 @@ export default class GroupStatusPage extends BaseClass {
       <h5>Rodada ${this.startDate}</h5>
       <p></p>
       <h5>Último ganhador</h5>
-      <p>${store.ongoingRound.lastWinner.displayName}</p>
+      <p>${store.ongoingRound.lastWinner?.displayName}</p>
       <h5>Fase atual</h5>
       <p>${this.getCurrentRoundPhase()}</p>
       <h5>Limite da fase atual</h5>
