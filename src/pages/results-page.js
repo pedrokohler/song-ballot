@@ -299,7 +299,7 @@ export default class ResultsPage extends BaseClass {
             <tr>
               <th><h5>Avaliador</h5></th>
               <th><h5>Pontos</h5></th>
-              <th><h5>Famosa?</h5></th>
+              <th><h5>Já conhecia?</h5></th>
             </tr>
           </thead>
           <tbody>
@@ -320,7 +320,7 @@ export default class ResultsPage extends BaseClass {
           <p>${score}</p>
         </td>
         <td>
-          <p>${ratedFamous ? "Sim" : "Não"}</p>
+          <p>${ratedFamous ? "✔" : ""}</p>
         </td>
       </tr>
     `;

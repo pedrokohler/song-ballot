@@ -151,7 +151,7 @@ export default class VotePage extends BaseClass {
             @change=${this.handleIsFamousInput}
             .checked=${this.isFamous}
           />
-          Eu já escutei essa música
+          Eu já conhecia essa música
         </label>
         ${this.videoTemplateNavigation()}
       `;
@@ -193,7 +193,7 @@ export default class VotePage extends BaseClass {
       ${this.submissions.map((submission) => html`
         <label>${submission.song?.title}</label>
         <label>Nota ${this.getScoreFromLocalStorage(submission?.id) || "inválida"}</label>
-        <label>${this.getIsFamousFromLocalStorage(submission?.id) === "true" ? "Famosa" : ""}</label>
+        <label>${this.getIsFamousFromLocalStorage(submission?.id) === "true" ? "✔" : ""}</label>
         <hr/>
       `)}
       <navigation-buttons
