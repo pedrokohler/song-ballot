@@ -138,7 +138,7 @@ export default class GroupStatusPage extends BaseClass {
             </tr>
           </thead>
           <tbody>
-            ${Array.from(store.users.values()).map(this.tableRowTemplate)}
+            ${Array.from(store.ongoingRound.users.values()).map(this.tableRowTemplate)}
           </tbody>
       </table>
     `;
