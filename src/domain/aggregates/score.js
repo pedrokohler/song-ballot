@@ -39,8 +39,9 @@ export const getSubmissionsPoints = (evaluations) => {
 
   const roundedPoints = Math.round(100 * basePoints) / 100;
   const penalty = getSubmissionPenalty(evaluations);
+  const finalScore = (roundedPoints - penalty).toFixed(2);
 
-  return roundedPoints - penalty;
+  return Number(finalScore);
 };
 
 // const getVoteMap = (evaluations) => {
