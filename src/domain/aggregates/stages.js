@@ -39,18 +39,20 @@ export const generateNewRoundPayload = ({
   users,
   lastWinner,
   timestampGenerator,
-}) => ({
-  submissionsStartAt: timestampGenerator(),
-  submissionsEndAt: timestampGenerator(getDayOfNextWeekWithTime("tuesday", 15, 0, 0)),
-  evaluationsStartAt: timestampGenerator(getDayOfNextWeekWithTime("tuesday", 15, 0, 1)),
-  evaluationsEndAt: timestampGenerator(getDayOfNextWeekWithTime("sunday", 23, 0, 0)),
-  submissions: [],
-  evaluations: [],
-  songs: [],
-  users: users || [],
-  lastWinner,
-  voteCount: 0,
-});
+}) => {
+  const newRound = {
+    submissionsStartAt: timestampGenerator(),
+    submissionsEndAt: timestampGenerator(getDayOfNextWeekWithTime("tuesday", 15, 0, 0)),
+    evaluationsStartAt: timestampGenerator(getDayOfNextWeekWithTime("tuesday", 15, 0, 1)),
+    evaluationsEndAt: timestampGenerator(getDayOfNextWeekWithTime("sunday", 23, 0, 0)),
+    submissions: [],
+    evaluations: [],
+    songs: [],
+    users: users || [],
+    voteCount: 0,
+  };
+  return lastWinner ? { ...newRound, lastWinner } : newRound;
+};
 
 export const shouldStartRoundEvaluationPeriod = (round) => {
   const { users, submissions, lastWinner } = round;

@@ -119,5 +119,5 @@ export const computeRoundWinner = (evaluations) => {
   const results = Array.from(Object.values(groupedEvaluations)).reduce(computeSubmissionResult, []);
   const lastWinner = Object.values(results).sort(rankSubmissions)[0];
 
-  return lastWinner.userId;
+  return lastWinner?.userId;
 };

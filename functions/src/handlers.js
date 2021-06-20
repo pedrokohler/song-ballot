@@ -292,8 +292,8 @@ const sendNewVoteNotification = async (groupId, uid) => {
 const getUserAndGroup = async (groupId, uid) => {
   const groupReference = getGroupReference(groupId);
   const userReference = getUserReference(uid);
-  const [group, user] = await Promise.all([groupReference.get(), userReference.get()]);
-  return { group: group.data(), user: user.data() };
+  const [group, user] = await Promise.all([groupReference.get(), uid && userReference.get()]);
+  return { group: group.data(), user: (uid && user.data()) || {}};
 }
 
 const sendMessageToWholeGroup = async (group, message) => {
