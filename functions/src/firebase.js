@@ -8,8 +8,10 @@ const getFirebaseTimestamp = (date) => {
   : now()
 };
 
-const getGroupReference = (id) => admin.firestore()
-  .collection("groups")
+const getGroupsCollection = () => admin.firestore()
+  .collection("groups");
+
+const getGroupReference = (id) => getGroupsCollection()
   .doc(id);
 
 const getCollectionReference = (collection) => (groupId) => getGroupReference(groupId)
@@ -28,6 +30,7 @@ const getSubmissionsReference = getCollectionReference("submissions");
 
 module.exports = {
   now,
+  getGroupsCollection,
   getUserReference,
   getGroupReference,
   getRoundReference,
