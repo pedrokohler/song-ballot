@@ -22,6 +22,18 @@ const {
   shouldFinishRound,
 } = require("./domain/aggregates/stages");
 
+const {
+  sendGroupNotificationWithUser,
+  sendSimpleGroupNotification,
+  sendTelegramMessage,
+  messageMap,
+  SUBMISSION_PERIOD_FINISHED_KEY,
+  NEW_EVALUATION_KEY,
+  EVALUATION_PERIOD_FINISHED_KEY,
+  NEW_SUBMISSION_KEY,
+  STAGE_ABOUT_TO_FINISH_KEY,
+} = require("./notifications");
+
 const initializeUser = async (user) => {
   const {
     uid: id, displayName, email, photoURL
@@ -118,10 +130,11 @@ const submissionPeriodFinishedAction = async ({
   groupId,
   ongoingRoundId,
 }) => {
+  const { messageGenerator, messageTag } = messageMap.get(SUBMISSION_PERIOD_FINISHED_KEY);
   await getRoundReference(groupId, ongoingRoundId).update({
-    "notifications.submissionPeriodFinished": true
+    [`notifications.${messageTag}`]: true
   });
-  return await sendSubmissionPeriodFinishedNotification(groupId);
+  return await sendSimpleGroupNotification(groupId, messageGenerator);
 }
 
 const checkSubmissionPeriodFinished = ({
@@ -133,52 +146,99 @@ const checkSubmissionPeriodFinished = ({
     && now.getTime() > submissionsEndAt.toMillis()
 }
 
-const submissionPeriodAboutToFinishAction = async ({
+const submissionPeriodAboutToFinishAction = (hours) => async ({
   groupId,
   ongoingRoundId,
 }) => {
+  const { messageGenerator, messageTag } = messageMap.get(STAGE_ABOUT_TO_FINISH_KEY);
   await getRoundReference(groupId, ongoingRoundId).update({
-    "notifications.submissionPeriodAboutToFinish": true
+    [`notifications.${messageTag("submission", hours)}`]: true
   });
-  return await sendSubmissionPeriodAboutToFinishNotification(groupId);
+  return await sendSimpleGroupNotification(
+    groupId,
+    messageGenerator("Submission", "sent your songs", hours)
+  );
 }
 
-const checkSubmissionPeriodAboutToFinish = ({
+const checkSubmissionPeriodAboutToFinish = (hours) => ({
   notifications,
   submissionsEndAt,
 }) => {
+  const { messageTag } = messageMap.get(STAGE_ABOUT_TO_FINISH_KEY);
+  const possibleHours = [24, 8, 2];
   const now = new Date();
-  const oneDayInMilliseconds = 24 * 60 * 60 * 1000;
-  return (notifications ? !notifications.submissionPeriodAboutToFinish : true)
-    && (notifications ? !notifications.submissionPeriodFinished : true)
-    && now.getTime() > submissionsEndAt.toMillis() - oneDayInMilliseconds;
+  const hoursInMilliseconds = hours * 60 * 60 * 1000;
+  if(notifications) {
+    const laterNotificationSent = notifications.submissionPeriodFinished
+      || possibleHours.filter(hour => hour <= hours)
+        .some(hour => notifications[messageTag("submission", hour)]);
+    if(laterNotificationSent) return false;
+  }
+  return now.getTime() > submissionsEndAt.toMillis() - hoursInMilliseconds;
 }
 
-const evaluationPeriodAboutToFinishAction = async ({
+const evaluationPeriodAboutToFinishAction = (hours) => async ({
   groupId,
   ongoingRoundId,
 }) => {
+  const { messageGenerator, messageTag } = messageMap.get(STAGE_ABOUT_TO_FINISH_KEY);
   await getRoundReference(groupId, ongoingRoundId).update({
-    "notifications.evaluationPeriodAboutToFinish": true
+    [`notifications.${messageTag("evaluation", hours)}`]: true
   });
-  return await sendEvaluationPeriodAboutToFinishNotification(groupId);
+  return await sendSimpleGroupNotification(
+    groupId,
+    messageGenerator("Evaluation", "voted", hours)
+  );
 }
 
-const checkEvaluationPeriodAboutToFinish = ({
+const checkEvaluationPeriodAboutToFinish = (hours) => ({
   notifications,
   evaluationsEndAt,
 }) => {
+  const { messageTag } = messageMap.get(STAGE_ABOUT_TO_FINISH_KEY);
+  const possibleHours = [24, 8, 2];
   const now = new Date();
-  const oneDayInMilliseconds = 24 * 60 * 60 * 1000;
-  return (notifications ? !notifications.evaluationPeriodAboutToFinish : true)
-    && now.getTime() > evaluationsEndAt.toMillis() - oneDayInMilliseconds;
+  const hoursInMilliseconds = hours * 60 * 60 * 1000;
+  if(notifications) {
+    const laterNotificationSent = possibleHours.filter(hour => hour <= hours)
+        .some(hour => notifications[messageTag("evaluation", hour)]);
+    if(laterNotificationSent) return false;
+  }
+  return now.getTime() > evaluationsEndAt.toMillis() - hoursInMilliseconds;
 }
 
 const checkActionMap = new Map([
-  [checkEvaluationPeriodFinished, evaluationPeriodFinishedAction],
-  [checkSubmissionPeriodFinished, submissionPeriodFinishedAction],
-  [checkSubmissionPeriodAboutToFinish, submissionPeriodAboutToFinishAction],
-  [checkEvaluationPeriodAboutToFinish, evaluationPeriodAboutToFinishAction]
+  ["evaluationPeriodFinished", {
+    check: checkEvaluationPeriodFinished,
+    action: evaluationPeriodFinishedAction
+  }],
+  ["evaluationPeriodAboutToFinish(2)", {
+    check: checkEvaluationPeriodAboutToFinish(2),
+    action: evaluationPeriodAboutToFinishAction(2)
+  }],
+  ["evaluationPeriodAboutToFinish(8)", {
+    check: checkEvaluationPeriodAboutToFinish(8),
+    action:evaluationPeriodAboutToFinishAction(8)}
+  ],
+  ["evaluationPeriodAboutToFinish(24)", {
+    check: checkEvaluationPeriodAboutToFinish(24),
+    action: evaluationPeriodAboutToFinishAction(24)
+  }],
+  ["submissionPeriodFinished", {
+    check: checkSubmissionPeriodFinished,
+    action: submissionPeriodFinishedAction}],
+  ["submissionPeriodAboutToFinish(2)", {
+    check: checkSubmissionPeriodAboutToFinish(2),
+    action: submissionPeriodAboutToFinishAction(2)
+  }],
+  ["submissionPeriodAboutToFinish(8)", {
+    check: checkSubmissionPeriodAboutToFinish(8),
+    action: submissionPeriodAboutToFinishAction(8)
+  }],
+  ["submissionPeriodAboutToFinish(24)", {
+    check: checkSubmissionPeriodAboutToFinish(24),
+    action: submissionPeriodAboutToFinishAction(24)
+  }],
 ]);
 
 
@@ -195,11 +255,16 @@ const checkRoundLifecycleAndMaybeNotifyUsers = async () => {
     } = roundReference.data();
 
     return [
-      checkEvaluationPeriodFinished,
-      checkEvaluationPeriodAboutToFinish,
-      checkSubmissionPeriodFinished,
-      checkSubmissionPeriodAboutToFinish
-    ].some(check => {
+      "evaluationPeriodFinished",
+      "evaluationPeriodAboutToFinish(2)",
+      "evaluationPeriodAboutToFinish(8)",
+      "evaluationPeriodAboutToFinish(24)",
+      "submissionPeriodFinished",
+      "submissionPeriodAboutToFinish(2)",
+      "submissionPeriodAboutToFinish(8)",
+      "submissionPeriodAboutToFinish(24)",
+    ].some(key => {
+      const { check, action } = checkActionMap.get(key)
       const result = check({
         notifications,
         submissionsEndAt,
@@ -208,7 +273,7 @@ const checkRoundLifecycleAndMaybeNotifyUsers = async () => {
       if (!result) {
         return false;
       }
-      return checkActionMap.get(check)({
+      return action({
         groupId,
         ongoingRoundId,
       });
@@ -245,19 +310,6 @@ const getUidComparingSubmissions = async ({
 }
 
 
-const sendTelegramMessage = (chatId, message) => {
-  const botKey = functions.config().telegram.bot.key;
-  const url = `https://api.telegram.org/bot${botKey}/sendMessage`;
-  const body = {
-    chat_id: chatId,
-    text: message
-  };
-  return axios.post(url, body)
-    .then(() => console.log("Success sending message!"))
-    .catch((e) => console.log(e.message, chatId, message));
-}
-
-
 const getYoutubeApiUrl = (videoId, apiKey) => "https://www.googleapis.com/youtube/v3/videos"
   + `?part=snippet&id=${videoId}&fields=items(id%2Csnippet)&key=${apiKey}`;
 
@@ -267,44 +319,21 @@ const handleNewVote = async ({
   round,
   uid
 }) => {
+  const  { messageGenerator } = messageMap.get(NEW_EVALUATION_KEY)
   if(uid){
-    await sendNewVoteNotification(groupId, uid);
+    await sendGroupNotificationWithUser(groupId, uid, messageGenerator);
   }
   if (shouldFinishRound(round)) {
     await finishRound(groupId, roundId);
   }
 }
 
-const sendRoundFinishedNotification = async (groupId, lastWinner) => {
-  const { group, user } = await getUserAndGroup(groupId, lastWinner);
-  const message = `Round just finished in ${group.name}. The winner was ${user.displayName}\n\n`
-    + `Congratulations, ${user.displayName}!\n\n`
-    + "Everyone can already send a song for the new round.";
-  return sendMessageToWholeGroup(group, message);
-}
-
-const sendNewVoteNotification = async (groupId, uid) => {
-  const { group, user } = await getUserAndGroup(groupId, uid);
-  const message = `User ${user.displayName} just voted in ${group.name}.`;
-  return sendMessageToWholeGroup(group, message);
-}
-
-const getUserAndGroup = async (groupId, uid) => {
-  const groupReference = getGroupReference(groupId);
-  const userReference = getUserReference(uid);
-  const [group, user] = await Promise.all([groupReference.get(), uid && userReference.get()]);
-  return { group: group.data(), user: (uid && user.data()) || {}};
-}
-
-const sendMessageToWholeGroup = async (group, message) => {
-  return Promise.all(group.telegramChatIds.map(chatId => sendTelegramMessage(chatId, message)));
-}
-
 const finishRound = async (groupId, roundId) => {
+  const { messageGenerator } = messageMap.get(EVALUATION_PERIOD_FINISHED_KEY);
   const lastWinner = await defineRoundWinner(groupId, roundId);
   await updateRoundEvaluationsEndAt(groupId, roundId);
   await startNewRound(groupId, lastWinner);
-  await sendRoundFinishedNotification(groupId, lastWinner);
+  await sendGroupNotificationWithUser(groupId, lastWinner, messageGenerator);
 }
 
 const updateRoundEvaluationsEndAt = async (groupId, roundId) => {
@@ -347,51 +376,24 @@ const handleNewSubmission = async ({
   uid
 }) => {
   if(uid){
-    await sendNewSubmissionsNotification(groupId, uid);
+    const { messageGenerator } = messageMap.get(NEW_SUBMISSION_KEY);
+    await sendGroupNotificationWithUser(groupId, uid, messageGenerator);
   }
   if(shouldStartRoundEvaluationPeriod(round)){
+    const { messageGenerator } = messageMap.get(SUBMISSION_PERIOD_FINISHED_KEY);
     await startRoundEvaluationPeriod(groupId, roundId);
-    await sendSubmissionPeriodFinishedNotification(groupId);
+    await sendSimpleGroupNotification(groupId, messageGenerator);
   }
-}
-
-const sendSubmissionPeriodFinishedNotification = async (groupId) => {
-  const groupReference = getGroupReference(groupId);
-  const group = await groupReference.get().then(g => g.data());
-  const message = `Submission period just finished in ${group.name}.\n\n`
-    + "Everyone can already start voting!";
-  return sendMessageToWholeGroup(group, message);
-}
-
-const sendSubmissionPeriodAboutToFinishNotification = async (groupId) => {
-  const groupReference = getGroupReference(groupId);
-  const group = await groupReference.get().then(g => g.data());
-  const message = `Submission period will finish in less than 24h in ${group.name}.\n\n`
-    + "If you haven't sent your song yet do it quickly!";
-  return sendMessageToWholeGroup(group, message);
-}
-
-const sendEvaluationPeriodAboutToFinishNotification = async (groupId) => {
-  const groupReference = getGroupReference(groupId);
-  const group = await groupReference.get().then(g => g.data());
-  const message = `Evaluation period will finish in less than 24h in ${group.name}.\n\n`
-    + "If you haven't voted yet do it quickly!";
-  return sendMessageToWholeGroup(group, message);
-}
-
-const sendNewSubmissionsNotification = async (groupId, uid) => {
-  const { group, user } = await getUserAndGroup(groupId, uid);
-  const message = `User ${user.displayName} just submitted a song in ${group.name}.`;
-  return sendMessageToWholeGroup(group, message);
 }
 
 const startRoundEvaluationPeriod = async (groupId, roundId) => {
+  const { messageTag } = messageMap.get(SUBMISSION_PERIOD_FINISHED_KEY);
   const now = firebaseNow();
   const roundReference = getRoundReference(groupId, roundId);
   await roundReference.update({
     submissionsEndAt: now,
     evaluationsStartAt: now,
-    "notifications.submissionPeriodFinished": true,
+    [`notifications.${messageTag}`]: true,
   });
 }
 
