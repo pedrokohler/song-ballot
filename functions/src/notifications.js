@@ -28,6 +28,7 @@ const messageMap = new Map ([
       `Round just finished in ${group.name}. The winner was ${user.displayName}\n\n`
       + `Congratulations, ${user.displayName}!\n\n`
       + "Everyone can already send a song for the new round.",
+    messageTag: "evaluationPeriodFinished"
   }],
   [NEW_SUBMISSION_KEY, {
     messageGenerator: (group, user) => `User ${user.displayName} just submitted a song in ${group.name}.`

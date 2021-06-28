@@ -114,10 +114,10 @@ const receiveTelegramBotMessage = async (req, res) => {
   }
 }
 
-const evaluationPeriodFinishedAction = ({
+const evaluationPeriodFinishedAction = async ({
   groupId,
   ongoingRoundId
-}) => finishRound(groupId, ongoingRoundId);
+}) => await finishRound(groupId, ongoingRoundId);
 
 const checkEvaluationPeriodFinished = ({
   evaluationsEndAt,
@@ -329,11 +329,14 @@ const handleNewVote = async ({
 }
 
 const finishRound = async (groupId, roundId) => {
-  const { messageGenerator } = messageMap.get(EVALUATION_PERIOD_FINISHED_KEY);
+  const { messageGenerator, messageTag } = messageMap.get(EVALUATION_PERIOD_FINISHED_KEY);
   const lastWinner = await defineRoundWinner(groupId, roundId);
   await updateRoundEvaluationsEndAt(groupId, roundId);
   await startNewRound(groupId, lastWinner);
   await sendGroupNotificationWithUser(groupId, lastWinner, messageGenerator);
+  await getRoundReference(groupId, roundId).update({
+    [`notifications.${messageTag}`]: true
+  });
 }
 
 const updateRoundEvaluationsEndAt = async (groupId, roundId) => {
